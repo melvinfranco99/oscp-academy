@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Metodología · OSCP Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css"><script src="assets/app.js" defer></script>
+</head>
+<body data-page="m05"><main>
+<div class="kicker">Módulo 5 · Nivel intermedio</div>
+<h1>Metodología y reconocimiento</h1>
+<p class="lead">La diferencia entre un principiante y un profesional no son las herramientas: es el <b>método</b>. Aquí construyes la lista de pasos que seguirás en cada máquina, y aprendes a organizar tus notas.</p>
+<div class="toc"><b>En este módulo</b><ol>
+<li><a href="#mapa">El mapa completo de un ataque a una máquina</a></li>
+<li><a href="#pasivo">Reconocimiento pasivo (OSINT)</a></li>
+<li><a href="#activo">Reconocimiento activo</a></li>
+<li><a href="#notas">Cómo tomar notas profesionales</a></li>
+<li><a href="#checklist">Tu checklist maestra</a></li>
+<li><a href="#practica">Prácticas y cuestionario</a></li>
+</ol></div>
+
+<h2 id="mapa">1. El mapa completo</h2>
+<figure class="diagram">
+<svg viewBox="0 0 760 420" role="img" aria-label="Diagrama de flujo de ataque a una máquina">
+<defs><marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--fg2)"/></marker></defs>
+<rect class="b1" x="290" y="10" width="180" height="44" rx="10"/><text x="380" y="37" text-anchor="middle" font-weight="700">IP objetivo</text>
+<rect class="b2" x="290" y="80" width="180" height="44" rx="10"/><text x="380" y="107" text-anchor="middle" font-weight="700">Escaneo de puertos</text>
+<rect class="b2" x="40" y="160" width="160" height="44" rx="10"/><text x="120" y="187" text-anchor="middle">Web (80/443)</text>
+<rect class="b2" x="220" y="160" width="160" height="44" rx="10"/><text x="300" y="187" text-anchor="middle">SMB / FTP / NFS</text>
+<rect class="b2" x="400" y="160" width="160" height="44" rx="10"/><text x="480" y="187" text-anchor="middle">Bases de datos</text>
+<rect class="b2" x="580" y="160" width="160" height="44" rx="10"/><text x="660" y="187" text-anchor="middle">Otros servicios</text>
+<rect class="b3" x="230" y="240" width="300" height="44" rx="10"/><text x="380" y="267" text-anchor="middle" font-weight="700">Vulnerabilidad o credenciales</text>
+<rect class="b5" x="230" y="310" width="300" height="44" rx="10"/><text x="380" y="337" text-anchor="middle" font-weight="700">Acceso inicial (usuario) → local.txt</text>
+<rect class="b4" x="230" y="370" width="300" height="44" rx="10"/><text x="380" y="397" text-anchor="middle" font-weight="700">Escalada → root/SYSTEM → proof.txt</text>
+<path class="ln" marker-end="url(#a5)" d="M380 54 V78 M380 124 V140 H120 V158 M380 140 H300 V158 M380 140 H480 V158 M380 140 H660 V158 M120 204 V222 H380 V238 M300 204 V222 M480 204 V222 M660 204 V222 H380 M380 284 V308 M380 354 V368"/>
+<path class="ln dash" marker-end="url(#a5)" d="M530 262 C 720 262 720 100 472 100"/><text x="700" y="290" text-anchor="end" class="small">¿nada? → enumera más</text>
+</svg><figcaption>Las flags <code>local.txt</code> (usuario) y <code>proof.txt</code> (root/admin) son las “pruebas” que entregas en el examen.</figcaption></figure>
+
+<h2 id="pasivo">2. Reconocimiento pasivo (OSINT)</h2>
+<div class="box def"><span class="t">OSINT</span><b>Open Source Intelligence</b>: información pública obtenida <b>sin tocar</b> los sistemas del objetivo (buscadores, redes sociales, registros públicos).</div>
+<div class="box analogy"><span class="t">El detective</span>Antes de llamar a la puerta, el detective mira el buzón, pregunta a los vecinos y busca en el periódico. Nadie en la casa sabe que está investigando.</div>
+<div class="tbl"><table>
+<tr><th>Fuente</th><th>Qué obtienes</th><th>Herramienta</th></tr>
+<tr><td>Whois</td><td>Dueño del dominio, fechas, servidores DNS</td><td><code>whois empresa.com</code></td></tr>
+<tr><td>Buscadores (Google dorks)</td><td>Archivos y páginas indexadas</td><td><code>site:empresa.com filetype:pdf</code></td></tr>
+<tr><td>Certificados TLS</td><td>Subdominios</td><td>crt.sh</td></tr>
+<tr><td>LinkedIn / web corporativa</td><td>Nombres de empleados → posibles usuarios</td><td>Navegador</td></tr>
+<tr><td>Metadatos de documentos</td><td>Autores, software, rutas internas</td><td><code>exiftool documento.pdf</code></td></tr>
+<tr><td>Repositorios públicos</td><td>Código, credenciales subidas por error</td><td>GitHub search</td></tr>
+<tr><td>Shodan</td><td>Servicios expuestos en Internet</td><td>shodan.io</td></tr>
+</table></div>
+<div class="box exam"><span class="t">En el examen</span>El OSCP casi no tiene OSINT (las máquinas están en una red privada). Pero el reconocimiento “dentro” de las máquinas es igual de importante: nombres de usuario en la web, en documentos, en el pie de página…</div>
+
+<h2 id="activo">3. Reconocimiento activo</h2>
+<p>Aquí sí interactúas con el objetivo: escaneas puertos, visitas la web, consultas servicios. Lo verás en profundidad en el <a href="m06-enumeracion.html">módulo 6</a>. La regla de oro:</p>
+<div class="box tip"><span class="t">De lo general a lo concreto</span>1) ¿Qué equipos hay? → 2) ¿Qué puertos tienen abiertos? → 3) ¿Qué software y versión hay en cada puerto? → 4) ¿Tiene esa versión fallos conocidos o una mala configuración?</div>
+
+<h2 id="notas">4. Cómo tomar notas profesionales</h2>
+<p>En el examen tendrás que escribir el reporte con lo que apuntaste. <b>Si no lo apuntaste, no lo puedes demostrar.</b></p>
+<pre data-nocopy>📁 OSCP-Examen/
+├── 📁 192.168.x.101/
+│   ├── 00-resumen.md        ← estado, flags, credenciales
+│   ├── 01-escaneo.md        ← salida de nmap
+│   ├── 02-enumeracion.md    ← por servicio
+│   ├── 03-acceso-inicial.md ← pasos exactos + capturas
+│   ├── 04-escalada.md
+│   └── 📁 capturas/
+├── 📁 192.168.x.102/
+├── 📁 AD/
+└── credenciales.md          ← TODAS las credenciales encontradas (¡prueba siempre en todo!)</pre>
+<div class="tbl"><table>
+<tr><th>Herramienta</th><th>Ventajas</th></tr>
+<tr><td><b>Obsidian</b></td><td>Markdown, enlaces entre notas, pegar capturas. Muy popular</td></tr>
+<tr><td><b>CherryTree</b></td><td>Viene con Kali, estructura en árbol</td></tr>
+<tr><td><b>Joplin / Notion</b></td><td>Sincronización entre dispositivos</td></tr>
+<tr><td><b>Flameshot</b></td><td>Capturas con anotaciones (flechas, recuadros)</td></tr>
+</table></div>
+<div class="box tip"><span class="t">Graba la terminal</span>Configura tu terminal para guardar todo con <code>script -a ~/logs/$(date +%F).log</code> o usa el registro de sesión de tmux. Si se te olvidó anotar un comando, estará ahí.</div>
+
+<h2 id="checklist">5. Tu checklist maestra</h2>
+<div class="tbl"><table>
+<tr><th>#</th><th>Paso</th><th>Hecho</th></tr>
+<tr><td>1</td><td>Escaneo rápido de todos los puertos TCP</td><td>☐</td></tr>
+<tr><td>2</td><td>Escaneo detallado (versiones + scripts) de los puertos abiertos</td><td>☐</td></tr>
+<tr><td>3</td><td>Escaneo UDP de los puertos más comunes</td><td>☐</td></tr>
+<tr><td>4</td><td>Por cada servicio: versión → buscar vulnerabilidades conocidas</td><td>☐</td></tr>
+<tr><td>5</td><td>Por cada servicio: acceso anónimo / credenciales por defecto</td><td>☐</td></tr>
+<tr><td>6</td><td>Web: tecnología, código fuente, robots.txt, directorios, parámetros</td><td>☐</td></tr>
+<tr><td>7</td><td>Recopilar nombres de usuario y posibles contraseñas</td><td>☐</td></tr>
+<tr><td>8</td><td>Probar credenciales encontradas en todos los servicios</td><td>☐</td></tr>
+<tr><td>9</td><td>Acceso inicial → capturar <code>local.txt</code> + <code>ip a</code>/<code>ipconfig</code></td><td>☐</td></tr>
+<tr><td>10</td><td>Enumeración local para escalada (manual + script)</td><td>☐</td></tr>
+<tr><td>11</td><td>Escalada → capturar <code>proof.txt</code> + <code>ip a</code>/<code>ipconfig</code></td><td>☐</td></tr>
+<tr><td>12</td><td>Post-explotación: buscar credenciales y otras redes para la siguiente máquina</td><td>☐</td></tr>
+</table></div>
+
+<h2 id="practica">Prácticas</h2>
+<details class="sol"><summary><span class="pill lv1">Fácil</span> ¿Pasivo o activo?</summary>
+<p class="task">(a) Mirar el LinkedIn de empleados. (b) Escanear puertos. (c) Consultar crt.sh. (d) Visitar la web y ver su código fuente.</p>
+<p><b>Solución:</b> (a) pasivo, (b) activo, (c) pasivo, (d) activo (aunque sea “suave”, tu IP queda en los registros del servidor).</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Prepara tu plantilla de notas</summary>
+<p class="task">Crea en Obsidian o CherryTree la estructura de carpetas de arriba para una máquina de TryHackMe y rellénala durante la sala.</p>
+<p><b>Solución:</b> no hay una única correcta. Comprueba que, leyendo solo tus notas, otra persona podría repetir el ataque paso a paso. Esa es la prueba de que son buenas.</p></details>
+<details class="sol"><summary><span class="pill lv3">Reto</span> Metadatos</summary>
+<p class="task">Descarga un PDF cualquiera de una web pública y ejecuta <code>exiftool</code> sobre él. ¿Qué información útil para un atacante encuentras?</p>
+<p><b>Solución:</b> suelen aparecer el campo <code>Author</code> o <code>Creator</code> (nombres reales → formato de usuarios como <code>nombre.apellido</code>), el software y su versión (<code>Producer</code>), y a veces rutas internas. En un reporte real se recomendaría limpiar metadatos antes de publicar documentos.</p></details>
+
+<div class="quiz" data-id="q5"></div>
+<script>
+window.QUIZ = { q5: { title: "Cuestionario · Metodología", qs: [
+ {q:"¿Qué es OSINT?", o:["Un escáner de puertos","Información obtenida de fuentes públicas","Un tipo de exploit","Un protocolo"], a:1, e:"Open Source Intelligence."},
+ {q:"¿Qué archivo demuestra el acceso de usuario en el examen?", t:1, a:["local.txt"], e:"local.txt; proof.txt para root/admin."},
+ {q:"¿Qué archivo demuestra privilegios máximos?", t:1, a:["proof.txt"], e:"proof.txt."},
+ {q:"Si estás atascado, lo primero es…", o:["Buscar el writeup","Volver a enumerar","Reiniciar Kali","Cambiar de herramienta de notas"], a:1, e:"Casi siempre falta enumeración."},
+ {q:"¿Qué herramienta lee metadatos de documentos?", o:["nmap","exiftool","hydra","gobuster"], a:1, e:"exiftool."},
+ {q:"Has encontrado una contraseña en la máquina A. ¿Qué haces?", o:["Nada, solo vale para A","Anotarla y probarla en todos los servicios y máquinas","Borrarla","Publicarla"], a:1, e:"La reutilización de contraseñas es una vía clásica."},
+ {q:"Orden correcto:", o:["Versión → puertos → equipos","Equipos → puertos → versiones → vulnerabilidades","Exploit → escaneo → notas","Escalada → acceso inicial"], a:1, e:"De lo general a lo concreto."},
+ {q:"¿Por qué tomar capturas durante el examen?", o:["Para redes sociales","Son las pruebas del reporte","Para ahorrar tiempo","No hace falta"], a:1, e:"Sin pruebas, no hay puntos."}
+]}};
+</script>
+</main></body></html>

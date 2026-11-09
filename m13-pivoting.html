@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pivoting y túneles · OSCP Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css"><script src="assets/app.js" defer></script>
+</head>
+<body data-page="m13"><main>
+<div class="kicker">Módulo 13 · Nivel OSCP</div>
+<h1>Pivoting y túneles</h1>
+<p class="lead">A veces, desde tu Kali no ves todas las máquinas: hay una red “detrás” a la que solo llega el equipo que acabas de comprometer. El pivoting es usar ese equipo como puente.</p>
+<div class="toc"><b>En este módulo</b><ol>
+<li><a href="#idea">El problema de la red oculta</a></li>
+<li><a href="#descubrir">Descubrir la red interna</a></li>
+<li><a href="#fwd">Port forwarding con SSH</a></li>
+<li><a href="#dyn">Proxy dinámico (SOCKS) y proxychains</a></li>
+<li><a href="#tools">Herramientas: chisel, ligolo-ng</a></li>
+<li><a href="#practica">Prácticas y cuestionario</a></li>
+</ol></div>
+
+<h2 id="idea">1. El problema de la red oculta</h2>
+<div class="box analogy"><span class="t">El edificio con dos plantas</span>Entras en recepción (planta baja), pero el ascensor a la planta de arriba solo funciona desde un despacho concreto de la baja. Si tomas ese despacho, puedes usar su ascensor para subir. El equipo comprometido es ese despacho; su segunda tarjeta de red es el ascensor.</div>
+<figure class="diagram">
+<svg viewBox="0 0 760 220" role="img" aria-label="Pivoting a través de una máquina con dos redes">
+<rect class="b1" x="20" y="80" width="130" height="60" rx="10"/><text x="85" y="106" text-anchor="middle" font-weight="700">Kali</text><text x="85" y="124" text-anchor="middle" class="small">192.168.45.x</text>
+<rect class="b3" x="300" y="70" width="160" height="80" rx="10"/><text x="380" y="98" text-anchor="middle" font-weight="700">PIVOTE (web01)</text><text x="380" y="118" text-anchor="middle" class="small">nic1: 192.168.50.10</text><text x="380" y="135" text-anchor="middle" class="small">nic2: 10.10.10.5</text>
+<rect class="b5" x="610" y="30" width="130" height="50" rx="8"/><text x="675" y="60" text-anchor="middle">10.10.10.20</text>
+<rect class="b5" x="610" y="140" width="130" height="50" rx="8"/><text x="675" y="170" text-anchor="middle">10.10.10.30</text>
+<path class="ln flow" d="M150 110H298"/><text x="224" y="100" text-anchor="middle" class="small">alcanzas</text>
+<path class="ln dash" d="M460 100 H540 V55 H608 M540 100 V165 H608"/><text x="540" y="210" text-anchor="middle" class="small">red 10.10.10.0/24: Kali NO la ve directamente</text>
+</svg></figure>
+<p>La máquina “pivote” tiene <b>dos tarjetas de red</b>: una en tu red (la ves) y otra en la red interna (no la ves). Vas a hacer que tu tráfico viaje a través de ella.</p>
+
+<h2 id="descubrir">2. Descubrir la red interna</h2>
+<p>Una vez dentro del pivote, busca la segunda red:</p>
+<pre><span class="cm"># Linux</span>
+ip a; ip route; arp -a
+<span class="cm"># Windows</span>
+ipconfig /all; route print; arp -a</pre>
+<p>Si ves una interfaz con otra IP (p. ej. <code>10.10.10.5</code>), ahí hay una red nueva. Haz un barrido rápido <b>desde el pivote</b> para ver qué equipos viven (con herramientas que ya estén o un mini script, para no subir nmap si no hace falta).</p>
+
+<h2 id="fwd">3. Port forwarding con SSH</h2>
+<p>Si el pivote es Linux y tienes credenciales SSH, es la forma más sencilla.</p>
+<div class="tbl"><table>
+<tr><th>Tipo</th><th>Comando (desde Kali)</th><th>Qué consigue</th></tr>
+<tr><td>Local (-L)</td><td><code>ssh -L 8080:10.10.10.20:80 user@PIVOTE</code></td><td>Tu <code>localhost:8080</code> llega al puerto 80 de 10.10.10.20</td></tr>
+<tr><td>Dinámico (-D)</td><td><code>ssh -D 1080 user@PIVOTE</code></td><td>Un proxy SOCKS en <code>localhost:1080</code> que da acceso a TODA la red interna</td></tr>
+</table></div>
+<div class="box def"><span class="t">Local port forward</span>“Conecta mi puerto X con ese puerto concreto de allá”. Útil cuando solo quieres llegar a <b>un</b> servicio (p. ej. una web interna o una base de datos).</div>
+
+<h2 id="dyn">4. Proxy dinámico (SOCKS) y proxychains</h2>
+<div class="box def"><span class="t">Proxy SOCKS + proxychains</span>El reenvío dinámico (<code>-D</code>) crea un “proxy” por el que puede pasar <i>cualquier</i> conexión hacia la red interna. <b>proxychains</b> es una herramienta que obliga a otros programas (nmap, netexec, el navegador) a pasar por ese proxy.</p></div>
+<ol class="steps">
+<li>Levanta el proxy dinámico: <code>ssh -D 1080 user@PIVOTE</code>.</li>
+<li>Edita <code>/etc/proxychains4.conf</code> y pon al final <code>socks5 127.0.0.1 1080</code>.</li>
+<li>Usa tus herramientas con <code>proxychains</code> delante:
+<pre>proxychains nmap -sT -Pn -p 80,445 10.10.10.20
+proxychains netexec smb 10.10.10.0/24 -u user -p pass
+proxychains firefox</pre></li>
+</ol>
+<div class="box warn"><span class="t">Limitaciones</span>A través de un proxy SOCKS solo pasa <b>TCP</b>, y debes usar <code>-sT</code> (connect) en nmap, nunca <code>-sS</code>. El ICMP (ping) y el UDP no pasan. Es más lento, así que escanea pocos puertos.</div>
+
+<h2 id="tools">5. Herramientas dedicadas</h2>
+<div class="tbl"><table>
+<tr><th>Herramienta</th><th>Ventaja</th><th>Cuándo</th></tr>
+<tr><td><b>chisel</b></td><td>Crea túneles por HTTP/WebSocket; sirve cuando no hay SSH (Windows incluido)</td><td>Pivote Windows o sin SSH</td></tr>
+<tr><td><b>ligolo-ng</b></td><td>Monta la red interna como una interfaz de red real en Kali: usas tus herramientas <b>sin</b> proxychains. Muy cómodo</td><td>La opción moderna favorita</td></tr>
+<tr><td><b>sshuttle</b></td><td>“VPN pobre” sobre SSH: enruta una subred entera</td><td>Pivote Linux con SSH</td></tr>
+<tr><td>SSH <code>-L</code>/<code>-D</code></td><td>Sin instalar nada si hay SSH</td><td>Pivote Linux</td></tr>
+</table></div>
+<div class="box analogy"><span class="t">chisel y ligolo</span>Si SSH es una puerta que da a la otra planta, chisel y ligolo son como construir tu propio ascensor privado cuando no hay puerta: tú pones las dos cabinas (una en Kali, otra en el pivote) y las conectas.</div>
+<div class="box exam"><span class="t">En el examen</span>El pivoting aparece sobre todo en la parte de Active Directory (las máquinas internas del dominio pueden no ser visibles directamente). Practica <b>un</b> método hasta dominarlo (ligolo-ng o chisel) en vez de saber cuatro a medias.</div>
+
+<h2 id="practica">Prácticas</h2>
+<div class="box tip"><span class="t">Dónde practicar</span>TryHackMe “Wreath” (red con pivoting) y salas de “Tunnelling”; HTB “ProLabs” y máquinas con doble red. Monta un mini laboratorio con 3 VMs y dos redes en VirtualBox.</div>
+<details class="sol"><summary><span class="pill lv1">Fácil</span> ¿Hay red interna?</summary>
+<p class="task">En el pivote, <code>ip a</code> muestra <code>eth0: 192.168.50.10</code> y <code>eth1: 172.16.8.5</code>. ¿Qué deduces?</p>
+<p><b>Solución:</b> hay una segunda red <code>172.16.8.0/24</code> a la que tu Kali probablemente no llega. Es candidata a pivoting.</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Llega a una web interna</summary>
+<p class="task">Quieres abrir en tu navegador la web del puerto 80 de <code>172.16.8.20</code>, al que solo llega el pivote (tienes SSH). Escribe el comando y la URL.</p>
+<pre>ssh -L 8000:172.16.8.20:80 user@192.168.50.10
+<span class="cm"># luego en el navegador:</span>  http://127.0.0.1:8000</pre></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Escanea la red interna</summary>
+<p class="task">Con un proxy dinámico ya montado en 127.0.0.1:1080, escribe el nmap correcto para escanear puertos comunes de 172.16.8.20.</p>
+<pre>proxychains nmap -sT -Pn -p 21,22,80,139,445,3389 172.16.8.20</pre>
+<p><code>-sT</code> y <code>-Pn</code> obligatorios a través de SOCKS; pocos puertos porque es lento.</p></details>
+<details class="sol"><summary><span class="pill lv3">Reto</span> Diseña el pivot doble</summary>
+<p class="task">Comprometes web01 (tiene red con una segunda subred donde vive SRV02). Desde SRV02 hay aún otra subred con el DC. ¿Cómo lo montarías conceptualmente?</p>
+<p><b>Solución:</b> pivoting “en cadena” (doble salto). Con ligolo-ng montas un agente en web01 y expones la subred de SRV02 a Kali; comprometes SRV02 y montas un segundo agente/relé que exponga la subred del DC. Con SSH sería encadenar reenvíos (<code>-D</code> a través del primer proxy con proxychains). La idea clave: cada máquina comprometida extiende tu alcance a la siguiente red. Documenta la topología con un diagrama en el reporte: ayuda muchísimo a quien lo lee.</p></details>
+
+<div class="quiz" data-id="q13"></div>
+<script>
+window.QUIZ = { q13: { title: "Cuestionario · Pivoting", qs: [
+ {q:"¿Qué es un pivote?", o:["Un exploit","Una máquina comprometida que usas para llegar a otra red","Un tipo de hash","Un escáner"], a:1, e:"Puente hacia una red no visible."},
+ {q:"¿Qué indica que una máquina sirve de pivote?", o:["Tiene el puerto 80","Tiene dos interfaces de red en subredes distintas","Es Windows","Corre Apache"], a:1, e:"Doble tarjeta = dos redes."},
+ {q:"ssh -D 1080 crea…", o:["Un reenvío local","Un proxy SOCKS dinámico","Una reverse shell","Un servidor web"], a:1, e:"Proxy dinámico SOCKS."},
+ {q:"¿Qué herramienta obliga a otros programas a usar el proxy?", t:1, a:["proxychains"], e:"proxychains."},
+ {q:"A través de SOCKS, nmap debe usar…", o:["-sS","-sU","-sT","-O"], a:2, e:"Connect scan (-sT); SYN no pasa."},
+ {q:"¿Qué NO pasa por un proxy SOCKS?", o:["TCP","HTTP","Ping (ICMP) y UDP","SMB"], a:2, e:"Solo TCP."},
+ {q:"ssh -L 8080:10.0.0.5:80 hace que…", o:["Tu 8080 llegue al 80 de 10.0.0.5","Escanees el 8080","Abras una shell","Cierres el 80"], a:0, e:"Reenvío local a un servicio concreto."},
+ {q:"¿Qué herramienta moderna monta la red interna como interfaz real (sin proxychains)?", o:["ligolo-ng","hydra","gobuster","exiftool"], a:0, e:"ligolo-ng."},
+ {q:"chisel es útil sobre todo cuando…", o:["Hay SSH","El pivote es Windows o no hay SSH","Quieres crackear hashes","Escaneas UDP"], a:1, e:"Túnel por HTTP/WS, multiplataforma."},
+ {q:"En el examen, el pivoting aparece sobre todo en…", o:["Las máquinas sueltas","La parte de Active Directory","El reporte","El escaneo inicial"], a:1, e:"La red interna del dominio."}
+]}};
+</script>
+</main></body></html>

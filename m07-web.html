@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vulnerabilidades web · OSCP Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css"><script src="assets/app.js" defer></script>
+</head>
+<body data-page="m07"><main>
+<div class="kicker">Módulo 7 · Nivel intermedio</div>
+<h1>Vulnerabilidades web</h1>
+<p class="lead">La web es la puerta de entrada más común en el OSCP. Aquí entiendes <b>por qué</b> fallan las aplicaciones, cómo se reconoce cada fallo y cómo se corrige (lo que pondrás en el reporte). La práctica la harás en laboratorios como PortSwigger Web Security Academy.</p>
+<div class="toc"><b>En este módulo</b><ol>
+<li><a href="#idea">La idea clave: mezclar datos con código</a></li>
+<li><a href="#burp">Burp Suite: tu lupa</a></li>
+<li><a href="#sqli">Inyección SQL</a></li>
+<li><a href="#lfi">Path traversal e inclusión de archivos</a></li>
+<li><a href="#cmdi">Inyección de comandos</a></li>
+<li><a href="#upload">Subida de archivos</a></li>
+<li><a href="#xss">XSS</a></li>
+<li><a href="#otras">Otras: credenciales por defecto, CMS, IDOR</a></li>
+<li><a href="#practica">Prácticas y cuestionario</a></li>
+</ol></div>
+
+<h2 id="idea">1. La idea clave</h2>
+<div class="box analogy"><span class="t">El formulario de la gestoría</span>Un empleado copia literalmente lo que escribes en la casilla “nombre” dentro de una orden que luego ejecuta su jefe. Si en la casilla escribes, además del nombre, “…y dale las llaves de la caja fuerte”, y el empleado lo copia sin mirar, el jefe obedecerá. Casi todas las vulnerabilidades web son esto: <b>la aplicación confía en lo que escribe el usuario y lo mezcla con instrucciones</b>.</div>
+<figure class="diagram">
+<svg viewBox="0 0 760 180" role="img" aria-label="Entrada de usuario llega al intérprete">
+<rect class="b1" x="10" y="60" width="150" height="60" rx="10"/><text x="85" y="88" text-anchor="middle" font-weight="700">Usuario</text><text x="85" y="106" text-anchor="middle" class="small">formulario / URL</text>
+<rect class="b2" x="230" y="60" width="170" height="60" rx="10"/><text x="315" y="88" text-anchor="middle" font-weight="700">Aplicación web</text><text x="315" y="106" text-anchor="middle" class="small">PHP, Python, .NET…</text>
+<path class="ln flow" d="M160 90H228M400 90H468"/>
+<rect class="b5" x="470" y="10" width="140" height="40" rx="8"/><text x="540" y="35" text-anchor="middle">Base de datos</text>
+<rect class="b5" x="470" y="70" width="140" height="40" rx="8"/><text x="540" y="95" text-anchor="middle">Sistema operativo</text>
+<rect class="b5" x="470" y="130" width="140" height="40" rx="8"/><text x="540" y="155" text-anchor="middle">Sistema de archivos</text>
+<rect class="b5" x="630" y="70" width="120" height="40" rx="8"/><text x="690" y="95" text-anchor="middle">Navegador</text>
+<text x="615" y="30" class="small">→ SQLi</text><text x="615" y="160" class="small">→ LFI / traversal</text><text x="560" y="128" class="small" text-anchor="middle">→ cmd injection</text>
+</svg><figcaption>El fallo aparece donde la entrada del usuario llega sin filtrar a un “intérprete”.</figcaption></figure>
+<p>Referencia del sector: <b>OWASP Top 10</b>, la lista de los riesgos web más importantes (control de acceso roto, fallos criptográficos, inyección, diseño inseguro, mala configuración…).</p>
+
+<h2 id="burp">2. Burp Suite: tu lupa</h2>
+<div class="box def"><span class="t">Proxy de interceptación</span>Programa que se coloca entre tu navegador y la web, para que puedas <b>ver y modificar</b> cada petición antes de que llegue al servidor. Burp Suite Community viene en Kali.</div>
+<figure class="diagram">
+<svg viewBox="0 0 640 110" role="img" aria-label="Navegador, Burp, servidor">
+<rect class="b1" x="10" y="30" width="150" height="50" rx="10"/><text x="85" y="60" text-anchor="middle" font-weight="700">Navegador</text>
+<rect class="b3" x="245" y="30" width="150" height="50" rx="10"/><text x="320" y="55" text-anchor="middle" font-weight="700">Burp :8080</text><text x="320" y="72" text-anchor="middle" class="small">ver · editar · repetir</text>
+<rect class="b2" x="480" y="30" width="150" height="50" rx="10"/><text x="555" y="60" text-anchor="middle" font-weight="700">Servidor web</text>
+<path class="ln flow" d="M160 55H243M395 55H478"/>
+</svg></figure>
+<div class="tbl"><table>
+<tr><th>Pestaña</th><th>Para qué</th></tr>
+<tr><td>Proxy → Intercept</td><td>Detener una petición y modificarla</td></tr>
+<tr><td>HTTP history</td><td>Ver todo lo que ha pasado</td></tr>
+<tr><td>Repeater</td><td>Reenviar una petición cambiando un parámetro cada vez (la más usada)</td></tr>
+<tr><td>Intruder</td><td>Probar una lista de valores en un parámetro (lento en la versión gratuita)</td></tr>
+<tr><td>Decoder</td><td>Codificar/decodificar Base64, URL, HTML…</td></tr>
+</table></div>
+
+<h2 id="sqli">3. Inyección SQL (SQLi)</h2>
+<div class="box def"><span class="t">SQL</span>Lenguaje para hablar con bases de datos: <code>SELECT * FROM usuarios WHERE nombre = 'ana'</code>.</div>
+<p>El fallo aparece cuando la aplicación <b>construye la consulta pegando texto</b> del usuario:</p>
+<div class="cols">
+<div><b class="bad">❌ Vulnerable</b>
+<pre>$u = $_POST['user'];
+$sql = "SELECT * FROM users
+        WHERE name = '$u'";</pre></div>
+<div><b class="good">✅ Corregido (consulta parametrizada)</b>
+<pre>$st = $pdo-&gt;prepare(
+  "SELECT * FROM users WHERE name = ?");
+$st-&gt;execute([$_POST['user']]);</pre></div>
+</div>
+<p>Si el usuario escribe una comilla <code>'</code>, en la versión vulnerable rompe la estructura de la consulta y la base de datos da un <b>error de sintaxis</b>. Esa es la primera señal que se busca: <i>un carácter especial cambia el comportamiento de la página</i>. A partir de ahí, un atacante puede alterar la lógica de la consulta para saltarse un login o leer otras tablas.</p>
+<div class="tbl"><table>
+<tr><th>Tipo</th><th>Cómo se nota</th></tr>
+<tr><td>Basada en errores</td><td>La página muestra el error SQL</td></tr>
+<tr><td>Basada en UNION</td><td>Los resultados de otra consulta aparecen en la página</td></tr>
+<tr><td>Ciega booleana</td><td>La página cambia ligeramente entre una condición verdadera y una falsa</td></tr>
+<tr><td>Ciega por tiempo</td><td>La respuesta tarda más cuando la condición es verdadera</td></tr>
+</table></div>
+<div class="box exam"><span class="t">Impacto en el OSCP</span>Una SQLi puede dar credenciales (tabla de usuarios con hashes) o, en algunos motores (p. ej. MSSQL con <code>xp_cmdshell</code> habilitado), ejecución de comandos. Recuerda: <b>sqlmap está prohibido</b> en el examen, así que debes entender la técnica manual. Practícala en PortSwigger Academy (sección SQL injection).</div>
+
+<h2 id="lfi">4. Path traversal e inclusión de archivos (LFI/RFI)</h2>
+<div class="box analogy"><span class="t">El archivador</span>Pides “el informe de marzo” y el empleado va a la carpeta <code>informes/marzo</code>. Si pides “sube dos carpetas y dame la agenda del director”, y el empleado no comprueba, te la dará.</div>
+<p>En las rutas, <code>../</code> significa “sube una carpeta”. Si una web hace <code>index.php?page=contacto</code> y el código abre el archivo indicado sin validar, se podría salir de la carpeta prevista y leer archivos del sistema (como <code>/etc/passwd</code>, que todos pueden leer, de ahí que sea la prueba típica).</p>
+<div class="tbl"><table>
+<tr><th>Variante</th><th>Qué consigue</th></tr>
+<tr><td>Path traversal</td><td>Leer archivos fuera de la carpeta web</td></tr>
+<tr><td>LFI (Local File Inclusion)</td><td>El servidor además <i>interpreta</i> el archivo incluido (p. ej., como PHP). Si el atacante logra meter código en un archivo local (logs, sesiones, subidas), se convierte en ejecución de código</td></tr>
+<tr><td>RFI (Remote File Inclusion)</td><td>Se incluye un archivo de <i>otro</i> servidor. Requiere configuraciones inseguras (<code>allow_url_include</code>)</td></tr>
+</table></div>
+<p><b>Qué leer si encuentras uno</b> (en tu lab): archivos de configuración de la web (credenciales de base de datos), claves SSH de usuarios, y en Windows archivos como <code>C:\Windows\win.ini</code> como prueba.</p>
+<p><b>Mitigación</b>: lista blanca de valores permitidos, no pasar rutas desde el usuario, <code>realpath()</code> y comprobar que el resultado queda dentro de la carpeta permitida.</p>
+
+<h2 id="cmdi">5. Inyección de comandos</h2>
+<p>Ocurre cuando la web ejecuta un comando del sistema con datos del usuario. Ejemplo típico: una herramienta “haz ping a esta IP” en un panel de administración.</p>
+<div class="cols">
+<div><b class="bad">❌ Vulnerable</b>
+<pre>ip = request.args["ip"]
+os.system("ping -c 1 " + ip)</pre></div>
+<div><b class="good">✅ Corregido</b>
+<pre>ip = ipaddress.ip_address(request.args["ip"])
+subprocess.run(["ping", "-c", "1", str(ip)])</pre></div>
+</div>
+<p>La shell interpreta caracteres especiales como <code>;</code>, <code>&amp;&amp;</code>, <code>|</code> o <code>$( )</code> como “y después ejecuta otra cosa”. Si la entrada no se valida, el usuario podría encadenar comandos propios. La corrección: validar el dato (que sea realmente una IP) y pasar los argumentos como lista, sin shell.</p>
+
+<h2 id="upload">6. Subida de archivos</h2>
+<p>Si una web permite subir archivos y luego los guarda en una carpeta accesible y ejecutable por el servidor, subir un script del lenguaje del servidor (p. ej. <code>.php</code>, <code>.aspx</code>) equivale a ejecutar código.</p>
+<div class="tbl"><table>
+<tr><th>Defensa débil</th><th>Por qué falla</th></tr>
+<tr><td>Comprobar solo la extensión con una lista negra</td><td>Existen extensiones alternativas que el servidor también ejecuta (<code>.phtml</code>, <code>.php5</code>…)</td></tr>
+<tr><td>Comprobar el <code>Content-Type</code></td><td>Lo envía el cliente: se cambia en Burp</td></tr>
+<tr><td>Comprobar los “magic bytes”</td><td>Se pueden anteponer al contenido</td></tr>
+</table></div>
+<p><b>Defensa correcta</b>: lista blanca de extensiones, renombrar el archivo, guardarlo fuera de la raíz web o en una carpeta sin permisos de ejecución, y comprobar el contenido.</p>
+
+<h2 id="xss">7. Cross-Site Scripting (XSS)</h2>
+<p>La web muestra texto del usuario sin “escaparlo”, y el navegador de <b>otra persona</b> lo interpreta como código JavaScript. Permite robar sesiones o actuar en nombre de la víctima.</p>
+<div class="tbl"><table>
+<tr><th>Tipo</th><th>Dónde se guarda</th></tr>
+<tr><td>Reflejado</td><td>En la URL; la víctima tiene que abrir un enlace</td></tr>
+<tr><td>Almacenado</td><td>En la base de datos (comentarios, perfiles): afecta a todos los que lo ven</td></tr>
+<tr><td>DOM</td><td>En el JavaScript del propio navegador</td></tr>
+</table></div>
+<div class="box exam"><span class="t">Relevancia</span>En el OSCP el XSS es poco frecuente como vía de entrada (no suele haber “víctimas” navegando). Las estrellas son SQLi, LFI, subida de archivos, inyección de comandos y software vulnerable o mal configurado.</div>
+
+<h2 id="otras">8. Otras vías muy frecuentes</h2>
+<div class="grid">
+<div class="card"><h4>🔑 Credenciales por defecto</h4><p>admin/admin, tomcat/tomcat, las del manual del fabricante. Pruébalas siempre en paneles (Tomcat, Jenkins, phpMyAdmin, routers).</p></div>
+<div class="card"><h4>🧩 CMS desactualizados</h4><p>WordPress, Joomla, Drupal y sus plugins. <code>wpscan</code> enumera versión, plugins y usuarios de WordPress.</p></div>
+<div class="card"><h4>🔢 IDOR</h4><p>Cambiar <code>?factura=1001</code> por <code>1002</code> y ver la de otro cliente. Falta de control de acceso.</p></div>
+<div class="card"><h4>📂 Archivos expuestos</h4><p>Carpeta <code>.git</code>, copias <code>.bak</code>, <code>phpinfo.php</code>, backups de la base de datos.</p></div>
+</div>
+
+<h2 id="practica">Prácticas</h2>
+<div class="box tip"><span class="t">Laboratorios recomendados (gratis y legales)</span><b>PortSwigger Web Security Academy</b>: rutas de SQL injection, Path traversal, OS command injection, File upload. <b>DVWA</b> (Damn Vulnerable Web App) en tu propia máquina virtual. TryHackMe: “OWASP Top 10”.</div>
+<details class="sol"><summary><span class="pill lv1">Fácil</span> Identifica el tipo de fallo</summary>
+<p class="task">(a) <code>?file=informe.pdf</code> y la página muestra el contenido de otro archivo al cambiar el nombre. (b) Un campo “buscar” devuelve “You have an error in your SQL syntax” al escribir una comilla. (c) Un formulario de “ping” devuelve más líneas de las esperadas al añadir un punto y coma.</p>
+<p><b>Solución:</b> (a) path traversal/LFI, (b) inyección SQL basada en errores, (c) inyección de comandos.</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Escribe la recomendación</summary>
+<p class="task">Redacta en 3 líneas la recomendación de corrección de una SQLi para el reporte.</p>
+<p><b>Solución (ejemplo):</b> “Sustituir la concatenación de cadenas por consultas parametrizadas (prepared statements) en todas las consultas a la base de datos. Aplicar validación de entrada por lista blanca y ejecutar la aplicación con un usuario de base de datos con los mínimos privilegios. Desactivar los mensajes de error detallados en producción.”</p></details>
+<details class="sol"><summary><span class="pill lv3">Reto</span> Cadena de ataque</summary>
+<p class="task">Explica cómo una LFI en una web podría acabar en acceso SSH, sin ejecutar ningún exploit.</p>
+<p><b>Solución:</b> con la LFI se leen archivos de configuración de la web (por ejemplo, el que conecta con la base de datos) que contienen una contraseña. Esa contraseña se reutiliza en la cuenta de un usuario del sistema (visto en <code>/etc/passwd</code>) y permite entrar por SSH. O bien se lee la clave privada SSH del usuario (<code>/home/usuario/.ssh/id_rsa</code>) si los permisos lo permiten. Lección: la reutilización de contraseñas convierte una lectura de archivos en acceso completo.</p></details>
+
+<div class="quiz" data-id="q7"></div>
+<script>
+window.QUIZ = { q7: { title: "Cuestionario · Web", qs: [
+ {q:"¿Cuál es la causa raíz común de las inyecciones?", o:["Contraseñas débiles","Mezclar la entrada del usuario con código o comandos sin validar","Usar HTTPS","Servidores lentos"], a:1, e:"Datos tratados como instrucciones."},
+ {q:"¿Cuál es la mejor defensa contra SQLi?", o:["Ocultar los errores","Consultas parametrizadas","Usar POST","Un captcha"], a:1, e:"Prepared statements."},
+ {q:"¿Qué significa ../ en una ruta?", o:["Carpeta actual","Carpeta superior","Raíz","Carpeta personal"], a:1, e:"Sube un nivel."},
+ {q:"LFI significa…", t:1, a:["local file inclusion"], e:"Local File Inclusion."},
+ {q:"¿Qué pestaña de Burp sirve para reenviar una petición modificándola?", o:["Decoder","Repeater","Comparer","Extender"], a:1, e:"Repeater."},
+ {q:"¿Qué herramienta está prohibida en el examen OSCP?", o:["Burp Suite Community","nmap","sqlmap","gobuster"], a:2, e:"sqlmap (explotación automática)."},
+ {q:"Comprobar solo el Content-Type de una subida es débil porque…", o:["Lo controla el cliente","Es muy lento","No existe","Lo cifra el servidor"], a:0, e:"Se modifica en Burp."},
+ {q:"Cambiar ?id=5 por ?id=6 y ver datos de otro usuario es…", o:["XSS","IDOR","CSRF","LFI"], a:1, e:"Insecure Direct Object Reference."},
+ {q:"¿Qué herramienta enumera WordPress?", t:1, a:["wpscan"], e:"wpscan."},
+ {q:"El XSS se ejecuta en…", o:["El servidor","La base de datos","El navegador de la víctima","El firewall"], a:2, e:"Es JavaScript en el navegador."},
+ {q:"¿Qué lista de referencia recoge los riesgos web principales?", o:["CVE","OWASP Top 10","CVSS","MITRE D3FEND"], a:1, e:"OWASP Top 10."}
+]}};
+</script>
+</main></body></html>

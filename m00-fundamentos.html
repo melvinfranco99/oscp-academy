@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fundamentos · OSCP Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css"><script src="assets/app.js" defer></script>
+</head>
+<body data-page="m00"><main>
+<div class="kicker">Módulo 0 · Nivel básico (tipo CompTIA Security+ / eJPT)</div>
+<h1>Fundamentos de ciberseguridad</h1>
+<p class="lead">Antes de atacar nada necesitas un mapa mental: qué protegemos, de quién, y qué palabras usan los profesionales.</p>
+<div class="toc"><b>En este módulo</b><ol>
+<li><a href="#ordenador">Cómo funciona un ordenador (en 5 minutos)</a></li>
+<li><a href="#cia">La tríada CIA</a></li>
+<li><a href="#vocab">Vulnerabilidad, amenaza, exploit, riesgo</a></li>
+<li><a href="#tipos">Tipos de pruebas de seguridad</a></li>
+<li><a href="#fases">Las fases de un pentest</a></li>
+<li><a href="#cvss">CVE y CVSS: cómo se miden los fallos</a></li>
+<li><a href="#etica">Ética, alcance y permisos</a></li>
+<li><a href="#practica">Prácticas y cuestionario</a></li>
+</ol></div>
+
+<h2 id="ordenador">1. Cómo funciona un ordenador (en 5 minutos)</h2>
+<figure class="diagram">
+<svg viewBox="0 0 720 230" role="img" aria-label="Capas: hardware, sistema operativo, programas, usuario">
+  <rect class="b5" x="60" y="170" width="600" height="44" rx="8"/><text x="360" y="198" text-anchor="middle" font-weight="700">Hardware: CPU · RAM · disco · tarjeta de red</text>
+  <rect class="b3" x="100" y="118" width="520" height="44" rx="8"/><text x="360" y="146" text-anchor="middle" font-weight="700">Sistema operativo (kernel): Linux / Windows</text>
+  <rect class="b1" x="140" y="66" width="440" height="44" rx="8"/><text x="360" y="94" text-anchor="middle" font-weight="700">Programas y servicios: navegador, servidor web, base de datos</text>
+  <rect class="b2" x="180" y="14" width="360" height="44" rx="8"/><text x="360" y="42" text-anchor="middle" font-weight="700">Usuarios (tú, admin, servicios)</text>
+</svg><figcaption>Cada capa usa a la de abajo. Un fallo en cualquier capa puede dar acceso a un atacante.</figcaption></figure>
+<div class="tbl"><table>
+<tr><th>Pieza</th><th>Qué es</th><th>Analogía</th></tr>
+<tr><td>CPU</td><td>El procesador: ejecuta instrucciones</td><td>El cocinero</td></tr>
+<tr><td>RAM</td><td>Memoria rápida y temporal (se borra al apagar)</td><td>La encimera donde trabaja</td></tr>
+<tr><td>Disco</td><td>Almacén permanente de archivos</td><td>La despensa</td></tr>
+<tr><td>Sistema operativo</td><td>Programa jefe que reparte recursos y controla permisos</td><td>El jefe de cocina</td></tr>
+<tr><td>Proceso</td><td>Un programa en ejecución</td><td>Un plato que se está cocinando</td></tr>
+<tr><td>Servicio</td><td>Proceso que se queda escuchando peticiones (web, SSH…)</td><td>El camarero que espera pedidos</td></tr>
+<tr><td>Usuario / privilegios</td><td>Quién eres y qué puedes hacer</td><td>Tarjeta de empleado: unas abren más puertas que otras</td></tr>
+</table></div>
+<div class="box exam"><span class="t">Por qué importa</span>
+En el OSCP siempre harás dos saltos: <b>1)</b> entrar como un usuario normal (“acceso inicial”) y <b>2)</b> convertirte en el usuario más poderoso: <code>root</code> en Linux o <code>SYSTEM</code>/<code>Administrator</code> en Windows (“escalada de privilegios”).</div>
+
+<h2 id="cia">2. La tríada CIA</h2>
+<figure class="diagram">
+<svg viewBox="0 0 520 280" role="img" aria-label="Triángulo CIA">
+  <polygon points="260,20 470,250 50,250" class="b1"/>
+  <circle cx="260" cy="40" r="6" class="pulse" fill="var(--c1)"/>
+  <text x="260" y="80" text-anchor="middle" font-weight="800">Confidencialidad</text><text x="260" y="100" text-anchor="middle" class="small">solo lo ve quien debe</text>
+  <text x="130" y="225" text-anchor="middle" font-weight="800">Integridad</text><text x="130" y="243" text-anchor="middle" class="small">nadie lo altera</text>
+  <text x="390" y="225" text-anchor="middle" font-weight="800">Disponibilidad</text><text x="390" y="243" text-anchor="middle" class="small">funciona cuando se necesita</text>
+</svg></figure>
+<div class="tbl"><table>
+<tr><th>Principio</th><th>Ejemplo de ataque</th><th>Ejemplo de defensa</th></tr>
+<tr><td>Confidencialidad</td><td>Robo de la base de datos de clientes</td><td>Cifrado, control de accesos</td></tr>
+<tr><td>Integridad</td><td>Cambiar el importe de una transferencia</td><td>Firmas digitales, hashes</td></tr>
+<tr><td>Disponibilidad</td><td>Ransomware que bloquea los ficheros</td><td>Copias de seguridad, redundancia</td></tr>
+</table></div>
+
+<h2 id="vocab">3. Vulnerabilidad, amenaza, exploit, riesgo</h2>
+<div class="box analogy"><span class="t">La casa</span>
+<b>Vulnerabilidad</b>: la ventana del baño no cierra bien. <b>Amenaza</b>: un ladrón del barrio. <b>Exploit</b>: la técnica concreta para abrir esa ventana. <b>Payload</b>: lo que hace el ladrón dentro. <b>Riesgo</b>: probabilidad de que pase × daño que causaría.</div>
+<div class="tbl"><table>
+<tr><th>Término</th><th>Definición sencilla</th></tr>
+<tr><td>Activo</td><td>Algo de valor que proteger (servidor, datos, reputación)</td></tr>
+<tr><td>Vulnerabilidad</td><td>Debilidad que puede aprovecharse (software viejo, contraseña débil, mala configuración)</td></tr>
+<tr><td>Amenaza</td><td>Quién o qué podría aprovecharla</td></tr>
+<tr><td>Exploit</td><td>Código o técnica que aprovecha una vulnerabilidad</td></tr>
+<tr><td>Payload</td><td>La parte del exploit que hace la acción final (p. ej., darte una consola remota)</td></tr>
+<tr><td>Vector de ataque</td><td>El camino de entrada (web, correo, servicio expuesto…)</td></tr>
+<tr><td>Superficie de ataque</td><td>Todos los vectores posibles juntos</td></tr>
+<tr><td>Riesgo</td><td>Probabilidad × impacto</td></tr>
+<tr><td>Mitigación</td><td>Medida que reduce el riesgo (parche, configuración, firewall)</td></tr>
+</table></div>
+
+<h2 id="tipos">4. Tipos de pruebas de seguridad</h2>
+<div class="grid">
+<div class="card"><h4>🔎 Análisis de vulnerabilidades</h4><p>Un programa escanea y lista posibles fallos. No los explota. Rápido y automático.</p></div>
+<div class="card"><h4>🧑‍💻 Pentest</h4><p>Una persona intenta <b>explotar</b> los fallos para demostrar el impacto real. Es lo que hace el OSCP.</p></div>
+<div class="card"><h4>🎭 Red Team</h4><p>Simula a un atacante real durante semanas, intentando no ser detectado.</p></div>
+<div class="card"><h4>🛡️ Blue Team</h4><p>Los defensores: monitorizan, detectan y responden.</p></div>
+</div>
+<div class="tbl"><table>
+<tr><th>Caja</th><th>Qué sabe el pentester</th><th>El OSCP es…</th></tr>
+<tr><td>Negra (black box)</td><td>Nada, solo la IP</td><td rowspan="3">Principalmente <b>caja negra</b> para las máquinas sueltas y <b>brecha asumida</b> (te dan un usuario) en Active Directory</td></tr>
+<tr><td>Gris (grey box)</td><td>Algo: un usuario, documentación</td></tr>
+<tr><td>Blanca (white box)</td><td>Todo, incluido el código fuente</td></tr>
+</table></div>
+
+<h2 id="fases">5. Las fases de un pentest</h2>
+<figure class="diagram">
+<svg viewBox="0 0 860 150" role="img" aria-label="Fases del pentest">
+  <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="var(--fg2)"/></marker></defs>
+  <g font-size="13">
+  <rect class="b1" x="5" y="40" width="120" height="64" rx="10"/><text x="65" y="68" text-anchor="middle" font-weight="700">1 Alcance</text><text x="65" y="88" text-anchor="middle" class="small">permisos</text>
+  <rect class="b2" x="150" y="40" width="120" height="64" rx="10"/><text x="210" y="68" text-anchor="middle" font-weight="700">2 Reconoc.</text><text x="210" y="88" text-anchor="middle" class="small">info pública</text>
+  <rect class="b2" x="295" y="40" width="120" height="64" rx="10"/><text x="355" y="68" text-anchor="middle" font-weight="700">3 Enumerar</text><text x="355" y="88" text-anchor="middle" class="small">puertos, servicios</text>
+  <rect class="b3" x="440" y="40" width="120" height="64" rx="10"/><text x="500" y="68" text-anchor="middle" font-weight="700">4 Explotar</text><text x="500" y="88" text-anchor="middle" class="small">acceso inicial</text>
+  <rect class="b5" x="585" y="40" width="120" height="64" rx="10"/><text x="645" y="68" text-anchor="middle" font-weight="700">5 Post-expl.</text><text x="645" y="88" text-anchor="middle" class="small">escalar, pivotar</text>
+  <rect class="b4" x="730" y="40" width="120" height="64" rx="10"/><text x="790" y="68" text-anchor="middle" font-weight="700">6 Reporte</text><text x="790" y="88" text-anchor="middle" class="small">hallazgos</text>
+  </g>
+  <path class="ln" marker-end="url(#ar)" d="M125 72h22M270 72h22M415 72h22M560 72h22M705 72h22"/>
+  <path class="ln dash" marker-end="url(#ar)" d="M645 104 C645 140 355 140 355 106"/><text x="500" y="146" text-anchor="middle" class="small">si encuentras algo nuevo, vuelves a enumerar</text>
+</svg></figure>
+<p>Esta es la columna vertebral de todo el curso. Cada módulo profundiza en una fase.</p>
+
+<h2 id="cvss">6. CVE y CVSS</h2>
+<div class="box def"><span class="t">CVE</span><b>Common Vulnerabilities and Exposures</b>: un “DNI” público para cada vulnerabilidad conocida, p. ej. <code>CVE-2021-44228</code> (Log4Shell). Año + número.</div>
+<div class="box def"><span class="t">CVSS</span><b>Common Vulnerability Scoring System</b>: nota de 0 a 10 que mide la gravedad. La usarás en el reporte.</div>
+<div class="tbl"><table>
+<tr><th>Nota CVSS</th><th>Gravedad</th><th>Ejemplo típico</th></tr>
+<tr><td>0.1 – 3.9</td><td><span class="pill lv1">Baja</span></td><td>Versión del servidor visible en la cabecera</td></tr>
+<tr><td>4.0 – 6.9</td><td><span class="pill lv2">Media</span></td><td>XSS reflejado</td></tr>
+<tr><td>7.0 – 8.9</td><td><span class="pill lv3">Alta</span></td><td>Escalada local de privilegios</td></tr>
+<tr><td>9.0 – 10</td><td><span class="pill lv3" style="background:#7f1d1d">Crítica</span></td><td>Ejecución remota de código sin autenticación</td></tr>
+</table></div>
+
+<h2 id="etica">7. Ética, alcance y permisos</h2>
+<ul>
+<li><b>Autorización por escrito</b> siempre. Sin papel firmado no hay pentest: hay delito.</li>
+<li><b>Alcance (scope)</b>: lista exacta de IPs/dominios que puedes tocar. Lo que esté fuera, no se toca.</li>
+<li><b>Reglas de enfrentamiento (RoE)</b>: horarios, técnicas prohibidas (p. ej., denegación de servicio), contactos de emergencia.</li>
+<li><b>Confidencialidad</b>: los datos que veas son del cliente. No se copian ni se comparten.</li>
+</ul>
+<div class="box exam"><span class="t">Reglas del examen</span>En el examen el “alcance” son solo las IPs que te asignan. Atacar la infraestructura de OffSec o a otros alumnos supone suspender y ser expulsado.</div>
+
+<h2 id="practica">Prácticas</h2>
+<details class="sol"><summary><span class="pill lv1">Fácil</span> Clasifica cada elemento</summary>
+<p class="task">Di si es vulnerabilidad, amenaza, exploit o mitigación: (a) un grupo de ransomware, (b) un servidor FTP que acepta usuario “anonymous”, (c) instalar el parche de seguridad, (d) un script público que aprovecha un fallo de Apache.</p>
+<p><b>Solución:</b> (a) amenaza · (b) vulnerabilidad (mala configuración) · (c) mitigación · (d) exploit.</p></details>
+<details class="sol"><summary><span class="pill lv1">Fácil</span> CIA en la vida real</summary>
+<p class="task">¿Qué pilar de la tríada se rompe en cada caso? (a) Alguien lee tus WhatsApp. (b) La web de tu banco no carga durante un ataque. (c) Alguien cambia tu nota en la web del instituto.</p>
+<p><b>Solución:</b> (a) Confidencialidad · (b) Disponibilidad · (c) Integridad.</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Ordena las fases</summary>
+<p class="task">Ordena: explotación, reporte, alcance, enumeración, escalada de privilegios, reconocimiento.</p>
+<p><b>Solución:</b> alcance → reconocimiento → enumeración → explotación → escalada de privilegios → reporte.</p></details>
+<details class="sol"><summary><span class="pill lv3">Reto</span> Calcula el riesgo</summary>
+<p class="task">Un fallo de nota CVSS 9.8 en un servidor interno sin acceso desde Internet, y otro de nota 6.5 en la web pública de pagos. ¿Cuál priorizarías y por qué?</p>
+<p><b>Solución:</b> No hay una única respuesta, y eso es lo importante: el riesgo depende del <b>contexto</b>, no solo de la nota CVSS. Un buen argumento: el 9.8 interno sigue siendo crítico si un atacante entra en la red (y en el OSCP verás que pivotar es habitual), pero la web de pagos está expuesta a todo Internet y maneja datos sensibles. Lo profesional es arreglar ambos, priorizar lo expuesto y explicar el razonamiento en el reporte.</p></details>
+
+<div class="quiz" data-id="q0"></div>
+<script>
+window.QUIZ = { q0: { title: "Cuestionario · Fundamentos", qs: [
+ {q:"¿Qué es un exploit?", o:["Un antivirus","Código o técnica que aprovecha una vulnerabilidad","Un tipo de firewall","Una contraseña débil"], a:1, e:"Un exploit aprovecha una vulnerabilidad. La vulnerabilidad es la debilidad en sí."},
+ {q:"Un ransomware cifra los ficheros de una empresa. ¿Qué pilar se ve más afectado?", o:["Confidencialidad","Integridad","Disponibilidad","Autenticación"], a:2, e:"Los datos dejan de estar disponibles. (Si además los roban, también se rompe la confidencialidad.)"},
+ {q:"En el OSCP, ¿qué es la “escalada de privilegios”?", o:["Entrar en la red Wi-Fi","Pasar de un usuario normal a root/SYSTEM","Escanear puertos","Escribir el reporte"], a:1, e:"Tras el acceso inicial, se busca el máximo privilegio: root en Linux o SYSTEM/Administrator en Windows."},
+ {q:"¿Qué documento define qué IPs puedes atacar?", o:["El CVE","El alcance (scope)","El payload","El CVSS"], a:1, e:"El alcance lista exactamente qué se puede probar."},
+ {q:"Una nota CVSS de 9.5 es…", o:["Baja","Media","Alta","Crítica"], a:3, e:"9.0–10.0 es crítica."},
+ {q:"¿Qué tipo de prueba explota los fallos para demostrar el impacto?", o:["Análisis de vulnerabilidades","Pentest","Auditoría de papel","Backup"], a:1, e:"El pentest va más allá de listar: demuestra el impacto real."},
+ {q:"Escribe el nombre del usuario con máximos privilegios en Linux.", t:1, a:["root"], e:"En Linux es root (UID 0)."},
+ {q:"¿Qué significa la “C” de CVE?", o:["Critical","Common","Computer","Cyber"], a:1, e:"Common Vulnerabilities and Exposures."},
+ {q:"Riesgo = …", o:["Vulnerabilidad + exploit","Probabilidad × impacto","CVSS ÷ 10","Amenaza − mitigación"], a:1, e:"La fórmula clásica es probabilidad por impacto."},
+ {q:"Un pentest sin autorización por escrito es…", o:["Legal si no rompes nada","Legal si es para aprender","Un delito","Legal si avisas después"], a:2, e:"Sin autorización expresa, el acceso a sistemas ajenos es delito."}
+]}};
+</script>
+</main></body></html>

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cómo hacer el reporte · OSCP Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css"><script src="assets/app.js" defer></script>
+</head>
+<body data-page="m14"><main>
+<div class="kicker">Módulo 14 · Nivel OSCP · imprescindible</div>
+<h1>Cómo hacer el reporte</h1>
+<p class="lead">En el OSCP, <b>el examen no termina al conseguir las flags</b>: termina cuando entregas un reporte profesional en las 24 h siguientes. Muchos aprueban la parte práctica y suspenden por un reporte incompleto. Aquí aprendes a hacerlo bien.</p>
+<div class="toc"><b>En este módulo</b><ol>
+<li><a href="#porque">Por qué el reporte lo es todo</a></li>
+<li><a href="#tipos">Qué reportes pide OffSec</a></li>
+<li><a href="#estructura">Estructura de un reporte profesional</a></li>
+<li><a href="#hallazgo">Cómo se escribe un hallazgo</a></li>
+<li><a href="#capturas">Capturas y pruebas que valen</a></li>
+<li><a href="#errores">Errores que hacen suspender</a></li>
+<li><a href="#herramientas">Herramientas</a></li>
+<li><a href="#practica">Práctica y cuestionario</a></li>
+</ol></div>
+
+<h2 id="porque">1. Por qué el reporte lo es todo</h2>
+<div class="box analogy"><span class="t">El fontanero sin factura</span>Un fontanero arregla la fuga, pero si no te entrega una factura detallada —qué estaba roto, qué piezas cambió, cuánto cuesta—, la empresa no puede pagarle ni repetir la reparación. En el mundo real, <b>el cliente paga por el informe</b>, no por el “hackeo”. El reporte es el producto.</div>
+<div class="box exam"><span class="t">Regla clave</span>OffSec puntúa según lo que está <b>documentado y reproducible</b>. Si consigues root pero no muestras los pasos ni el <code>proof.txt</code>, esos puntos no cuentan. “Si no está en el reporte, no pasó.”</div>
+
+<h2 id="tipos">2. Qué reportes pide OffSec</h2>
+<div class="tbl"><table>
+<tr><th>Momento</th><th>Reporte</th><th>Obligatorio</th></tr>
+<tr><td>Durante el curso</td><td>Reporte de los <b>ejercicios</b> del libro + de las máquinas de los <b>labs</b></td><td>Opcional, pero suma hasta 10 puntos extra si se hace completo y se aprueban los ejercicios</td></tr>
+<tr><td>Tras el examen</td><td>Reporte del <b>examen</b> (el que decide el aprobado)</td><td>Sí, en 24 h</td></tr>
+</table></div>
+<div class="box tip"><span class="t">Puntos extra</span>Entregar el reporte de ejercicios + labs puede darte hasta <b>10 puntos</b> que se suman a la nota del examen. Con 70 para aprobar, esos puntos son un colchón enorme. Revisa en la guía oficial las condiciones vigentes.</div>
+
+<h2 id="estructura">3. Estructura de un reporte profesional</h2>
+<figure class="diagram">
+<svg viewBox="0 0 760 290" role="img" aria-label="Secciones del reporte">
+<g font-size="13">
+<rect class="b1" x="20" y="10" width="720" height="38" rx="8"/><text x="380" y="34" text-anchor="middle" font-weight="700">1 · Portada: título, tu nombre, OSID, fecha, versión</text>
+<rect class="b2" x="20" y="54" width="720" height="38" rx="8"/><text x="380" y="78" text-anchor="middle" font-weight="700">2 · Resumen ejecutivo: para no técnicos — qué se hizo y resultado global</text>
+<rect class="b3" x="20" y="98" width="720" height="38" rx="8"/><text x="380" y="122" text-anchor="middle" font-weight="700">3 · Alcance y metodología: IPs, fechas, enfoque</text>
+<rect class="b4" x="20" y="142" width="720" height="60" rx="8"/><text x="380" y="166" text-anchor="middle" font-weight="700">4 · Hallazgos por máquina (el grueso)</text><text x="380" y="188" text-anchor="middle" class="small">por cada una: enumeración → acceso inicial → escalada → pruebas (local.txt, proof.txt)</text>
+<rect class="b5" x="20" y="208" width="355" height="40" rx="8"/><text x="197" y="233" text-anchor="middle" font-weight="700">5 · Active Directory: recorrido completo</text>
+<rect class="bx" x="385" y="208" width="355" height="40" rx="8"/><text x="562" y="233" text-anchor="middle" font-weight="700">6 · Anexos: pasos extra, scripts</text>
+<rect class="bx" x="20" y="254" width="720" height="30" rx="8"/><text x="380" y="274" text-anchor="middle" class="small">(En el examen OffSec NO exige la sección de recomendaciones de remediación; en un pentest real, sí)</text>
+</g></svg></figure>
+<div class="box warn"><span class="t">Sigue la plantilla oficial</span>OffSec da una <b>plantilla oficial</b> (Markdown/Word). Úsala: su corrección espera ese formato. Nuestra <a href="plantilla-reporte.html">plantilla</a> te sirve para aprender la estructura y practicar.</div>
+
+<h2 id="hallazgo">4. Cómo se escribe un hallazgo</h2>
+<p>Cada máquina se cuenta como una “historia” reproducible. Un revisor debe poder <b>repetir tus pasos</b> y llegar al mismo sitio. El patrón para cada paso:</p>
+<ol class="steps">
+<li><b>Qué hiciste</b> (una frase): “Escaneé todos los puertos TCP con nmap.”</li>
+<li><b>El comando exacto</b> en bloque de código.</li>
+<li><b>El resultado relevante</b> (recortado) o una captura.</li>
+<li><b>Qué concluiste y el siguiente paso</b>: “El puerto 8080 expone un panel X vulnerable a…”.</li>
+</ol>
+<div class="box def"><span class="t">Nivel de detalle</span>La prueba de oro: ¿podría otra persona, con tu reporte y nada más, reproducir el acceso de cero a root? Si falta un comando, una ruta o una credencial, añádelo. Pero no rellenes con paja: claridad &gt; longitud.</div>
+<h3>Ejemplo de redacción (resumido)</h3>
+<div class="card">
+<p><b>4.2 · 192.168.50.101 — Acceso inicial</b></p>
+<p>Tras enumerar el puerto 80 se identificó la aplicación <i>AcmeCMS 2.1</i>. El panel de administración era accesible con las credenciales por defecto del fabricante, documentadas en su manual público.</p>
+<pre data-nocopy>Comando: curl -s http://192.168.50.101/version.txt
+Resultado: AcmeCMS v2.1</pre>
+<p><i>[Captura 4.2.1: panel de administración tras el inicio de sesión]</i></p>
+<p>Desde el panel, la función de “plantillas” permitía subir archivos que el servidor ejecutaba, lo que proporcionó ejecución de comandos como el usuario <code>www-data</code> y la lectura de <code>local.txt</code>.</p>
+<pre data-nocopy>Comando: type local.txt  →  a1b2c3d4e5f6...</pre>
+<p><i>[Captura 4.2.2: shell como www-data mostrando `id` y el contenido de local.txt]</i></p>
+</div>
+
+<h2 id="capturas">5. Capturas y pruebas que valen</h2>
+<div class="tbl"><table>
+<tr><th>✅ Una buena captura</th><th>❌ Una captura que no vale</th></tr>
+<tr><td>Muestra el comando <b>y</b> su salida</td><td>Solo la flag, sin contexto</td></tr>
+<tr><td>Incluye <code>id</code>/<code>whoami</code> + <code>ip a</code>/<code>ipconfig</code> junto a la flag</td><td>Flag copiada como texto suelto</td></tr>
+<tr><td>La IP de la máquina es visible</td><td>Recortada hasta no saber de qué máquina es</td></tr>
+<tr><td>Legible, sin tapar lo importante</td><td>Borrosa o en miniatura</td></tr>
+</table></div>
+<div class="box exam"><span class="t">El estándar de las flags</span>Para cada <code>local.txt</code> y <code>proof.txt</code>: una captura que muestre, en la misma pantalla, el comando que lee la flag, <b>su contenido</b>, y la salida de <code>ipconfig</code>/<code>ip a</code> que demuestra que estás en <i>esa</i> máquina. Es un requisito explícito.</div>
+
+<h2 id="errores">6. Errores que hacen suspender</h2>
+<div class="grid">
+<div class="card"><div class="emoji">🕳️</div><h4>Pasos que no se pueden reproducir</h4><p>Saltas del escaneo a “tengo shell” sin explicar cómo.</p></div>
+<div class="card"><div class="emoji">📸</div><h4>Faltan capturas de flags</h4><p>Sin la prueba estándar, no puntúa.</p></div>
+<div class="card"><div class="emoji">🤖</div><h4>Usar herramientas prohibidas</h4><p>Y documentarlo: es autodelación. Revisa las reglas.</p></div>
+<div class="card"><div class="emoji">⏰</div><h4>Entregar tarde o en mal formato</h4><p>Fuera de las 24 h o sin seguir la plantilla/entrega.</p></div>
+<div class="card"><div class="emoji">🔁</div><h4>No escribir mientras trabajas</h4><p>Dejarlo todo para el final y no acordarte de los pasos.</p></div>
+<div class="card"><div class="emoji">🧩</div><h4>No contar la cadena completa en AD</h4><p>Mostrar el DC comprometido sin el camino que llevó hasta él.</p></div>
+</div>
+
+<h2 id="herramientas">7. Herramientas para escribir el reporte</h2>
+<div class="tbl"><table>
+<tr><th>Herramienta</th><th>Uso</th></tr>
+<tr><td>Plantilla oficial de OffSec</td><td>El punto de partida obligatorio</td></tr>
+<tr><td>Obsidian / CherryTree</td><td>Tomar notas durante el examen (luego las vuelcas)</td></tr>
+<tr><td>Flameshot / Greenshot</td><td>Capturas con flechas y recuadros</td></tr>
+<tr><td>Pandoc</td><td>Convertir Markdown a PDF con buen formato</td></tr>
+<tr><td>SysReptor</td><td>Plataforma libre para redactar reportes de pentest (tiene plantilla OSCP)</td></tr>
+</table></div>
+<div class="box tip"><span class="t">Entrega</span>El reporte final se entrega normalmente como <b>un único PDF comprimido en .7z</b> subido al panel de OffSec, dentro de las 24 h. Comprueba el nombre del archivo y el método de entrega en la guía: un fallo administrativo también suspende.</div>
+
+<h2 id="practica">Práctica</h2>
+<details class="sol"><summary><span class="pill lv1">Fácil</span> ¿Qué falta en esta captura?</summary>
+<p class="task">Una captura muestra solo: <code>proof.txt</code> → <code>9f8e7d...</code>. ¿Qué le falta para ser válida?</p>
+<p><b>Solución:</b> el comando que la lee (<code>type</code>/<code>cat</code>), la prueba de identidad (<code>whoami</code> = system/root) y la IP de la máquina (<code>ipconfig</code>/<code>ip a</code>). Todo en la misma pantalla.</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Reescribe un paso pobre</summary>
+<p class="task">Mejora esto: “Entré en la web y conseguí shell.”</p>
+<p><b>Solución (ejemplo):</b> “En el puerto 80 se identificó <i>ProductX 1.4</i> (captura X). El formulario de subida de la sección ‘perfil’ aceptaba archivos con extensión <code>.phtml</code>, que el servidor ejecutaba. Al subir un archivo con código del lado servidor y solicitarlo (<code>http://IP/uploads/a.phtml</code>), se obtuvo ejecución de comandos como <code>www-data</code> (captura Y). Comando y resultado abajo.” → luego el bloque de comando y la captura.</p></details>
+<details class="sol"><summary><span class="pill lv3">Reto</span> Documenta una máquina completa</summary>
+<p class="task">Resuelve una máquina “Easy” de Proving Grounds o HTB y escribe su sección de reporte usando nuestra <a href="plantilla-reporte.html">plantilla</a>: enumeración, acceso inicial, escalada, y las dos capturas de flags con el estándar correcto.</p>
+<p><b>Solución:</b> compárala con la checklist del módulo 5 y con los errores de la sección 6. Dásela a leer a alguien no implicado: si puede entender cómo entraste sin preguntarte nada, está bien hecha.</p></details>
+
+<div class="quiz" data-id="q14"></div>
+<script>
+window.QUIZ = { q14: { title: "Cuestionario · Reporte", qs: [
+ {q:"¿Cuánto tiempo tienes para entregar el reporte tras el examen?", o:["12 horas","24 horas","48 horas","1 semana"], a:1, e:"24 horas."},
+ {q:"\"Si no está en el reporte...\"", o:["...da igual","...no pasó / no puntúa","...lo asumen","...lo preguntan"], a:1, e:"Solo cuenta lo documentado y reproducible."},
+ {q:"Una captura de flag válida incluye el comando, la flag y…", o:["La hora","ipconfig/ip a (identidad de la máquina)","El logo de OffSec","Tu DNI"], a:1, e:"Prueba de en qué máquina estás."},
+ {q:"¿Qué sección es para personas NO técnicas?", o:["Hallazgos","Resumen ejecutivo","Anexos","Metodología"], a:1, e:"El resumen ejecutivo."},
+ {q:"Los puntos extra del reporte de ejercicios+labs pueden sumar hasta…", o:["5","10","20","0"], a:1, e:"Hasta 10 puntos (según condiciones vigentes)."},
+ {q:"La prueba de que un hallazgo está bien escrito es…", o:["Que sea largo","Que otra persona pueda reproducirlo con tu reporte","Que use muchos tecnicismos","Que tenga colores"], a:1, e:"Reproducibilidad."},
+ {q:"¿Qué formato suele pedir OffSec para la entrega final?", o:["Un .docx suelto","Un PDF comprimido (.7z) subido al panel","Un correo","Un repositorio de GitHub"], a:1, e:"PDF en .7z por el panel (verifica la guía)."},
+ {q:"En el reporte del EXAMEN, la sección de remediación es…", o:["Obligatoria","No exigida (sí en pentest real)","Lo más importante","Prohibida"], a:1, e:"OffSec no la exige en el examen; en un trabajo real sí."},
+ {q:"¿Cuándo debes escribir las notas?", o:["Al final de todo","Mientras trabajas, paso a paso","Solo si apruebas","Nunca"], a:1, e:"En tiempo real, o se te olvidan los pasos."},
+ {q:"En AD debes documentar…", o:["Solo el DC final","Toda la cadena de movimiento lateral hasta el DC","Solo el primer usuario","Nada"], a:1, e:"El recorrido completo."}
+]}};
+</script>
+</main></body></html>

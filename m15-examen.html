@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Estrategia del examen · OSCP Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css"><script src="assets/app.js" defer></script>
+</head>
+<body data-page="m15"><main>
+<div class="kicker">Módulo 15 · Nivel OSCP</div>
+<h1>Estrategia del examen</h1>
+<p class="lead">Dominar la técnica no basta: el OSCP es también una prueba de <b>resistencia, gestión del tiempo y nervios</b>. Aquí tienes un plan para las casi 24 horas.</p>
+<div class="toc"><b>En este módulo</b><ol>
+<li><a href="#reglas">Reglas y puntuación</a></li>
+<li><a href="#antes">La semana y el día de antes</a></li>
+<li><a href="#plan">Plan de las 24 horas</a></li>
+<li><a href="#tiempo">Gestión del tiempo y de los bloqueos</a></li>
+<li><a href="#atascos">Qué hacer cuando te atascas</a></li>
+<li><a href="#kit">Tu kit y tus apuntes</a></li>
+<li><a href="#practica">Autoevaluación y cuestionario</a></li>
+</ol></div>
+
+<h2 id="reglas">1. Reglas y puntuación</h2>
+<div class="tbl"><table>
+<tr><th>Dato</th><th>Valor (verifica siempre la guía oficial)</th></tr>
+<tr><td>Duración práctica</td><td>23 h 45 min</td></tr>
+<tr><td>Reporte</td><td>24 h adicionales</td></tr>
+<tr><td>Aprobado</td><td>70 / 100</td></tr>
+<tr><td>Máquinas independientes</td><td>3 × (10 inicial + 10 root) = 60</td></tr>
+<tr><td>Active Directory</td><td>40 (se puntúa como conjunto; normalmente “todo o parte” según avances)</td></tr>
+<tr><td>Puntos extra</td><td>Hasta 10 por el reporte de ejercicios+labs</td></tr>
+<tr><td>Metasploit</td><td>Solo en 1 máquina independiente</td></tr>
+<tr><td>Proctoring</td><td>Vigilancia por webcam y pantalla todo el examen</td></tr>
+</table></div>
+<div class="box warn"><span class="t">Prohibido</span>Escáneres automáticos de vulnerabilidades (Nessus, OpenVAS, Nuclei…), explotación automática (sqlmap, Autoblue…), herramientas de IA que resuelvan por ti, y pedir ayuda a terceros. Usar scripts comerciales “todo en uno” también. <b>Lee la Exam Guide actualizada</b>: las reglas cambian.</div>
+
+<h2 id="antes">2. La semana y el día de antes</h2>
+<ul>
+<li><b>No estudies técnica nueva la víspera.</b> Repasa tus apuntes y descansa.</li>
+<li><b>Comprueba los requisitos de proctoring</b> días antes: webcam, DNI, conexión estable, navegador compatible. Haz la verificación de sistema que ofrece OffSec.</li>
+<li><b>Prepara el entorno</b>: Kali actualizado, VPN probada, herramientas y wordlists descargadas (rockyou descomprimida, SecLists, LinPEAS/WinPEAS, Impacket, etc.).</li>
+<li><b>Comida, agua y descansos</b> planificados. Es una maratón, no un sprint.</li>
+<li><b>Duerme.</b> El cansancio hace que no veas lo evidente.</li>
+</ul>
+
+<h2 id="plan">3. Plan de las 24 horas</h2>
+<figure class="diagram">
+<svg viewBox="0 0 760 170" role="img" aria-label="Línea de tiempo del examen">
+<line x1="30" y1="60" x2="730" y2="60" class="ln"/>
+<g text-anchor="middle" font-size="12">
+<circle cx="70" cy="60" r="7" class="b2" style="fill:var(--c2)"/><text x="70" y="40">0 h</text><text x="70" y="90">lanzar nmap</text><text x="70" y="104">en TODAS</text>
+<circle cx="220" cy="60" r="7" style="fill:var(--c1)"/><text x="220" y="40">0–6 h</text><text x="220" y="90">atacar lo más</text><text x="220" y="104">fácil primero</text>
+<circle cx="380" cy="60" r="7" style="fill:var(--c3)"/><text x="380" y="40">6–8 h</text><text x="380" y="90">descanso +</text><text x="380" y="104">empezar AD</text>
+<circle cx="540" cy="60" r="7" style="fill:var(--c4)"/><text x="540" y="40">8–18 h</text><text x="540" y="90">AD completo +</text><text x="540" y="104">máquina difícil</text>
+<circle cx="690" cy="60" r="7" style="fill:var(--c5)"/><text x="690" y="40">18–24 h</text><text x="690" y="90">capturas y</text><text x="690" y="104">verificar puntos</text>
+</g>
+<text x="380" y="150" text-anchor="middle" class="small">Regla: cuando tengas ≥ 70 puntos asegurados y bien documentados, respira. Lo demás es extra.</text>
+</svg></figure>
+<ol class="steps">
+<li><b>Minuto 0:</b> lanza el escaneo de puertos en <b>todas</b> las máquinas a la vez (en segundo plano) mientras preparas notas.</li>
+<li><b>Primeras horas:</b> empieza por la máquina que parezca más sencilla para coger confianza y puntos. Alterna si una se resiste.</li>
+<li><b>Objetivo mental:</b> consigue primero todos los <b>accesos iniciales</b> (10 puntos cada uno son muy rentables) antes de obsesionarte con una escalada.</li>
+<li><b>Active Directory:</b> trátalo como un bloque; sigue el flujo del módulo 12. Son 40 puntos, no lo dejes para el final agotado.</li>
+<li><b>Últimas 4–6 h:</b> <b>deja de atacar</b> y dedícalas a capturas, pruebas y a verificar que tienes documentado todo lo necesario para ≥70.</li>
+</ol>
+
+<h2 id="tiempo">4. Gestión del tiempo y de los bloqueos</h2>
+<div class="tbl"><table>
+<tr><th>Síntoma</th><th>Acción</th></tr>
+<tr><td>Llevas &gt;45–60 min sin avanzar en una máquina</td><td>Cambia a otra. Vuelve con la mente fresca</td></tr>
+<tr><td>Un exploit no funciona tras 2–3 intentos reales</td><td>Busca otra versión del exploit o otra vía; no entres en bucle</td></tr>
+<tr><td>Cansancio, no ves lo obvio</td><td>Descanso de 15–20 min, agua, caminar</td></tr>
+<tr><td>Pánico</td><td>Respira, vuelve a la checklist del módulo 5: “¿he enumerado todo?”</td></tr>
+</table></div>
+<div class="box tip"><span class="t">Documenta mientras avanzas</span>Cada paso que funciona → cópialo a tus notas <b>en ese momento</b> con su captura. Al final estarás cansado y no recordarás cómo entraste. Esto también evita rehacer trabajo.</div>
+
+<h2 id="atascos">5. Qué hacer cuando te atascas</h2>
+<figure class="diagram">
+<svg viewBox="0 0 760 230" role="img" aria-label="Árbol de decisión ante un atasco">
+<defs><marker id="ae" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--fg2)"/></marker></defs>
+<rect class="b5" x="300" y="10" width="160" height="40" rx="8"/><text x="380" y="35" text-anchor="middle" font-weight="700">¿Atascado?</text>
+<rect class="b1" x="60" y="90" width="200" height="50" rx="8"/><text x="160" y="110" text-anchor="middle">¿Enumeré TODOS</text><text x="160" y="128" text-anchor="middle">los puertos? (-p-, UDP)</text>
+<rect class="b2" x="290" y="90" width="200" height="50" rx="8"/><text x="390" y="110" text-anchor="middle">¿Probé TODAS las</text><text x="390" y="128" text-anchor="middle">credenciales en todo?</text>
+<rect class="b3" x="520" y="90" width="200" height="50" rx="8"/><text x="620" y="110" text-anchor="middle">¿Revisé versiones</text><text x="620" y="128" text-anchor="middle">en searchsploit/Google?</text>
+<rect class="b4" x="180" y="170" width="200" height="50" rx="8"/><text x="280" y="190" text-anchor="middle">¿Miré el código</text><text x="280" y="208" text-anchor="middle">fuente / archivos ocultos?</text>
+<rect class="b5" x="400" y="170" width="200" height="50" rx="8"/><text x="500" y="190" text-anchor="middle">Cambia de máquina</text><text x="500" y="208" text-anchor="middle">y vuelve luego</text>
+<path class="ln" marker-end="url(#ae)" d="M340 50 L170 88 M380 50 V88 M420 50 L610 88 M300 140 L285 168 M470 140 L495 168"/>
+</svg></figure>
+<p>El 90% de los atascos en el OSCP se resuelven <b>enumerando más</b> o <b>probando credenciales ya encontradas en otro sitio</b>. No busques un exploit exótico antes de haber agotado lo básico.</p>
+<div class="box warn"><span class="t">No hagas trampas</span>Buscar writeups de las máquinas del examen, pedir ayuda o usar herramientas prohibidas = suspenso y posible baneo permanente. No merece la pena.</div>
+
+<h2 id="kit">6. Tu kit y tus apuntes</h2>
+<div class="grid">
+<div class="card"><h4>📒 Cheatsheet personal</h4><p>Un solo documento con tus comandos de enumeración por servicio, estabilización de shells, transferencia de archivos y privesc. Que te quepa de un vistazo.</p></div>
+<div class="card"><h4>🧰 Herramientas listas</h4><p>LinPEAS/WinPEAS, Impacket, netexec, chisel/ligolo, gobuster, wordlists. Todo descargado antes.</p></div>
+<div class="card"><h4>📁 Plantillas de notas</h4><p>Carpeta por máquina ya creada (módulo 5) y la <a href="plantilla-reporte.html">plantilla de reporte</a> abierta.</p></div>
+<div class="card"><h4>⌨️ Alias y scripts</h4><p>Pequeños atajos para no reescribir comandos largos. Pruébalos antes del examen.</p></div>
+</div>
+
+<h2 id="practica">7. Autoevaluación</h2>
+<details class="sol"><summary><span class="pill lv1">Fácil</span> ¿Estás listo?</summary>
+<p class="task">Marca mentalmente: ¿resuelves máquinas “Easy/Medium” de HTB/PG sin pistas? ¿Haces Kerberoasting y pass-the-hash sin mirar? ¿Escribes un reporte reproducible? ¿Sabes pivotar con una herramienta?</p>
+<p><b>Solución:</b> si respondes “sí” a las cuatro de forma consistente, estás en buen punto. Si no, prioriza la que falle antes de agendar el examen.</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Planifica tu bloque de AD</summary>
+<p class="task">Escribe, de memoria, los 6 pasos del flujo de AD (módulo 12) y una herramienta para cada uno.</p>
+<p><b>Solución:</b> credenciales iniciales → enumerar (BloodHound/netexec) → más credenciales (GetUserSPNs, spraying) → movimiento lateral (evil-winrm/psexec) → escalar en el dominio (abuso de ACL/PtH) → comprometer DC (secretsdump/NTDS). Si te trabas, repasa el módulo.</p></details>
+<details class="sol"><summary><span class="pill lv3">Reto</span> Simulacro real</summary>
+<p class="task">Haz un <a href="simulacro.html">simulacro</a> de examen completo: reserva 24 h, usa un conjunto de máquinas tipo OSCP (p. ej. una lista de Proving Grounds o TJnull), cronométralo y escribe el reporte entero.</p>
+<p><b>Solución:</b> el objetivo no es solo “hackear”, sino comprobar tu resistencia y que tu método y tu reporte funcionan bajo presión. Apunta dónde perdiste tiempo y ajústalo.</p></details>
+
+<div class="quiz" data-id="q15"></div>
+<script>
+window.QUIZ = { q15: { title: "Cuestionario · Estrategia", qs: [
+ {q:"¿Cuántos puntos necesitas para aprobar?", o:["60","70","80","100"], a:1, e:"70 de 100."},
+ {q:"¿Qué haces en el minuto 0 del examen?", o:["Atacar la primera máquina","Lanzar escaneos en todas a la vez","Escribir el reporte","Descansar"], a:1, e:"Escaneos en paralelo mientras preparas notas."},
+ {q:"Llevas una hora atascado en una máquina. Deberías…", o:["Insistir hasta lograrlo","Cambiar a otra y volver luego","Rendirte","Buscar el writeup"], a:1, e:"Rotar mantiene la mente fresca y aprovecha el tiempo."},
+ {q:"La causa más común de atasco es…", o:["Falta de exploits raros","Enumeración insuficiente","Mala suerte","El firewall"], a:1, e:"Casi siempre falta enumerar."},
+ {q:"¿Cuándo dejas de atacar para documentar?", o:["Nunca","En las últimas 4-6 horas","A la hora 2","Tras la primera flag"], a:1, e:"Reserva el final para capturas y verificación."},
+ {q:"En cuántas máquinas puedes usar Metasploit (explotación):", t:1, a:["1","una"], e:"Solo en una independiente."},
+ {q:"Buscar el writeup de una máquina del examen…", o:["Está permitido","Es motivo de suspenso/baneo","Da puntos extra","Es recomendable"], a:1, e:"Prohibido."},
+ {q:"¿Qué NO debes hacer la víspera?", o:["Dormir","Repasar apuntes","Estudiar una técnica totalmente nueva","Preparar el entorno"], a:2, e:"Nada nuevo la víspera; descansa."},
+ {q:"Los puntos extra del reporte de labs pueden darte hasta…", o:["5","10","40","0"], a:1, e:"Hasta 10."},
+ {q:"Prioriza conseguir primero…", o:["Todas las escaladas","Todos los accesos iniciales","Solo el AD","Solo una máquina al 100%"], a:1, e:"Los accesos iniciales son muy rentables y abren el resto."}
+]}};
+</script>
+</main></body></html>

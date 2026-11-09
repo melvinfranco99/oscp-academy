@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scripting · OSCP Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css"><script src="assets/app.js" defer></script>
+</head>
+<body data-page="m04"><main>
+<div class="kicker">Módulo 4 · Nivel básico–intermedio</div>
+<h1>Bash, Python y PowerShell</h1>
+<p class="lead">No necesitas ser programador para el OSCP, pero sí <b>leer</b> scripts ajenos, <b>adaptarlos</b> y automatizar tareas repetitivas. Aquí aprendes lo justo y necesario.</p>
+<div class="toc"><b>En este módulo</b><ol>
+<li><a href="#conceptos">Conceptos comunes a todos los lenguajes</a></li>
+<li><a href="#bash">Bash</a></li>
+<li><a href="#python">Python</a></li>
+<li><a href="#ps">PowerShell</a></li>
+<li><a href="#leer">Leer y adaptar código público</a></li>
+<li><a href="#practica">Prácticas y cuestionario</a></li>
+</ol></div>
+
+<h2 id="conceptos">1. Conceptos comunes</h2>
+<div class="box analogy"><span class="t">Una receta</span>Un script es una receta: <b>variables</b> = ingredientes con nombre; <b>condicional</b> = “si la masa está líquida, añade harina”; <b>bucle</b> = “remueve 10 veces”; <b>función</b> = una sub-receta reutilizable (“haz bechamel”).</div>
+<div class="tbl"><table>
+<tr><th>Concepto</th><th>Bash</th><th>Python</th><th>PowerShell</th></tr>
+<tr><td>Variable</td><td><code>ip="10.0.0.5"</code></td><td><code>ip = "10.0.0.5"</code></td><td><code>$ip = "10.0.0.5"</code></td></tr>
+<tr><td>Imprimir</td><td><code>echo $ip</code></td><td><code>print(ip)</code></td><td><code>Write-Output $ip</code></td></tr>
+<tr><td>Condicional</td><td><code>if [ $x -eq 1 ]; then … fi</code></td><td><code>if x == 1:</code></td><td><code>if ($x -eq 1) { … }</code></td></tr>
+<tr><td>Bucle</td><td><code>for i in {1..5}; do … done</code></td><td><code>for i in range(1,6):</code></td><td><code>foreach ($i in 1..5) { … }</code></td></tr>
+<tr><td>Comentario</td><td><code># …</code></td><td><code># …</code></td><td><code># …</code></td></tr>
+<tr><td>Argumentos</td><td><code>$1, $2</code></td><td><code>sys.argv[1]</code></td><td><code>$args[0]</code></td></tr>
+</table></div>
+
+<h2 id="bash">2. Bash</h2>
+<p>Ideal para encadenar comandos de Linux. Ejemplo clásico: descubrir qué equipos responden en una red.</p>
+<pre>#!/bin/bash
+# ping_sweep.sh — uso: ./ping_sweep.sh 192.168.1
+red=$1
+for host in $(seq 1 254); do
+  ping -c 1 -W 1 "$red.$host" &gt; /dev/null 2&gt;&amp;1 &amp;&amp; echo "[+] $red.$host está activo" &amp;
+done
+wait</pre>
+<ol class="steps">
+<li><code>#!/bin/bash</code> (“shebang”) indica qué intérprete usar.</li>
+<li><code>red=$1</code> guarda el primer argumento.</li>
+<li>El bucle recorre del 1 al 254.</li>
+<li><code>ping -c 1 -W 1</code> envía un solo ping con 1 s de espera; la salida se descarta.</li>
+<li><code>&amp;&amp; echo</code> solo imprime si el ping fue bien. El <code>&amp;</code> final lo lanza en paralelo; <code>wait</code> espera a todos.</li>
+</ol>
+<div class="term" data-title="ejecutar el script"><script type="text/plain">
+$ chmod +x ping_sweep.sh
+$ ./ping_sweep.sh 192.168.50
+[+] 192.168.50.1 está activo
+[+] 192.168.50.101 está activo
+[+] 192.168.50.120 está activo
+// Recuerda: Windows suele bloquear el ping, así que puede haber más equipos.
+</script></div>
+<h3>One-liners útiles</h3>
+<pre>for u in $(cat usuarios.txt); do echo "$u@corp.local"; done &gt; correos.txt
+cat nmap.gnmap | grep "/open/" | cut -d" " -f2 | sort -u &gt; hosts_vivos.txt
+while read l; do echo "$l" | base64 -d; done &lt; codificados.txt</pre>
+
+<h2 id="python">3. Python</h2>
+<p>El lenguaje en el que están escritos muchísimos exploits y herramientas públicas. Debes saber leerlo y ejecutarlo.</p>
+<pre>#!/usr/bin/env python3
+# comprobar_web.py — comprueba qué rutas existen en una web de tu laboratorio
+import sys
+import requests
+
+url = sys.argv[1]
+rutas = ["admin", "login", "backup", "uploads"]
+
+for r in rutas:
+    resp = requests.get(f"{url}/{r}", timeout=5)
+    if resp.status_code != 404:
+        print(f"[+] /{r} -&gt; {resp.status_code}")</pre>
+<div class="tbl"><table>
+<tr><th>Línea</th><th>Explicación</th></tr>
+<tr><td><code>import requests</code></td><td>Carga la librería para hacer peticiones HTTP</td></tr>
+<tr><td><code>sys.argv[1]</code></td><td>El primer argumento que pasas al ejecutar</td></tr>
+<tr><td><code>f"{url}/{r}"</code></td><td>“f-string”: mete variables dentro del texto</td></tr>
+<tr><td>Sangría (espacios)</td><td>En Python la sangría <b>define los bloques</b>. Si la estropeas, falla</td></tr>
+</table></div>
+<h3>Herramientas de Python que usarás</h3>
+<pre>python3 -m http.server 80          <span class="cm"># servidor web rápido para pasar archivos a la víctima</span>
+python3 -m venv venv &amp;&amp; source venv/bin/activate   <span class="cm"># entorno aislado para instalar dependencias</span>
+pip install -r requirements.txt
+python3 -c 'import pty; pty.spawn("/bin/bash")'   <span class="cm"># mejora una consola básica (módulo 8)</span></pre>
+
+<h2 id="ps">4. PowerShell</h2>
+<pre># Buscar archivos que contengan "password" en la carpeta de un usuario
+Get-ChildItem -Path C:\Users\ana -Recurse -Include *.txt,*.xml,*.config -ErrorAction SilentlyContinue |
+  Select-String -Pattern "password" |
+  Select-Object Path, LineNumber, Line</pre>
+<pre># Comprobar qué puertos responden en otra máquina interna
+1..1024 | ForEach-Object {
+  if ((New-Object Net.Sockets.TcpClient).ConnectAsync("10.10.10.20", $_).Wait(100)) { "Puerto $_ abierto" }
+}</pre>
+<div class="box def"><span class="t">Execution Policy</span>Política que limita qué scripts .ps1 se ejecutan. <b>No es una barrera de seguridad</b> (Microsoft lo dice así): en tu lab se puede ejecutar con <code>powershell -ep bypass</code>.</div>
+
+<h2 id="leer">5. Leer y adaptar código público</h2>
+<p>En el OSCP usarás exploits publicados (Exploit-DB, GitHub). <b>Casi nunca funcionan a la primera</b>: hay que leerlos y adaptarlos.</p>
+<ol class="steps">
+<li><b>Lee el código entero antes de ejecutarlo.</b> ¿Qué hace? ¿Hay algo destructivo? ¿Se conecta a algún sitio que no esperas?</li>
+<li><b>Busca las variables a cambiar</b>: IP objetivo, puerto, tu IP (LHOST), rutas, usuario/contraseña.</li>
+<li><b>Comprueba la versión de Python</b>: <code>print "x"</code> sin paréntesis = Python 2. Conviértelo o usa <code>python2</code>.</li>
+<li><b>Comprueba la versión del software objetivo</b>: el exploit suele servir solo para versiones concretas.</li>
+<li><b>Instala dependencias</b> en un entorno virtual.</li>
+<li><b>Prueba y depura</b>: lee los errores, añade <code>print()</code> para ver qué pasa.</li>
+</ol>
+<div class="box warn"><span class="t">Nunca ejecutes a ciegas</span>Hay “exploits” falsos en GitHub que atacan al que los ejecuta. Leer el código no es opcional: te protege y te enseña.</div>
+
+<h2 id="practica">Prácticas</h2>
+<details class="sol"><summary><span class="pill lv1">Fácil</span> Primer script Bash</summary>
+<p class="task">Escribe un script que reciba un nombre y diga “Hola, NOMBRE”.</p>
+<pre>#!/bin/bash
+echo "Hola, $1"</pre></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Generador de contraseñas candidatas</summary>
+<p class="task">Con Python, a partir de una lista de palabras (empresa, ciudad…) genera variantes añadiendo los años 2023–2025 y un “!” al final. Útil para auditar contraseñas débiles en tu lab.</p>
+<pre>palabras = ["Corp", "Madrid", "Verano"]
+for p in palabras:
+    for anio in range(2023, 2026):
+        print(f"{p}{anio}")
+        print(f"{p}{anio}!")</pre></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Detecta Python 2</summary>
+<p class="task">¿Qué líneas de este fragmento delatan Python 2 y cómo las corregirías?</p>
+<pre>print "[*] Conectando a", host
+data = raw_input("Comando: ")
+except Exception, e:</pre>
+<p><b>Solución:</b> las tres. En Python 3: <code>print("[*] Conectando a", host)</code>, <code>input("Comando: ")</code>, <code>except Exception as e:</code>. Ojo también con cadenas/bytes al usar sockets: en Python 3 hay que hacer <code>.encode()</code>.</p></details>
+<details class="sol"><summary><span class="pill lv3">Reto</span> Extrae puertos de nmap</summary>
+<p class="task">De un archivo <code>scan.nmap</code> con líneas como <code>22/tcp open ssh</code>, obtén una lista de puertos separada por comas (para pasarla a otro escaneo).</p>
+<pre>grep "/tcp" scan.nmap | grep open | cut -d/ -f1 | paste -sd,</pre>
+<p>Resultado típico: <code>22,80,445</code>. <code>paste -sd,</code> une las líneas con comas.</p></details>
+
+<div class="quiz" data-id="q4"></div>
+<script>
+window.QUIZ = { q4: { title: "Cuestionario · Scripting", qs: [
+ {q:"¿Qué indica la primera línea #!/bin/bash?", o:["Un comentario cualquiera","El intérprete que ejecutará el script","Que es root","Una variable"], a:1, e:"Es el shebang."},
+ {q:"En Bash, ¿cómo accedes al primer argumento?", t:1, a:["$1"], e:"$1, $2…"},
+ {q:"En Python, ¿qué define los bloques de código?", o:["Llaves {}","La sangría","Puntos y coma","Paréntesis"], a:1, e:"La indentación."},
+ {q:"print \"hola\" (sin paréntesis) indica…", o:["Python 3","Python 2","PowerShell","Bash"], a:1, e:"Sintaxis de Python 2."},
+ {q:"¿Qué comando levanta un servidor web rápido en Python 3?", o:["python3 -m http.server","python3 -web","pip serve","python3 -m ftp"], a:0, e:"python3 -m http.server [puerto]."},
+ {q:"En PowerShell, las variables empiezan por…", o:["%","@","$","&"], a:2, e:"$variable."},
+ {q:"La Execution Policy de PowerShell es…", o:["Un antivirus","Una barrera de seguridad fuerte","Una política de conveniencia que se puede saltar","Un firewall"], a:2, e:"Microsoft no la considera una frontera de seguridad."},
+ {q:"Antes de ejecutar un exploit público debes…", o:["Ejecutarlo para ver qué pasa","Leerlo entero y adaptar IPs/puertos","Subirlo a VirusTotal y listo","Ejecutarlo como root"], a:1, e:"Siempre leer y entender."},
+ {q:"&& en Bash significa…", o:["Ejecuta en paralelo","Ejecuta el segundo solo si el primero tiene éxito","Comentario","Redirige errores"], a:1, e:"Operador AND lógico."},
+ {q:"¿Qué librería de Python se usa para peticiones HTTP?", t:1, a:["requests"], e:"requests."}
+]}};
+</script>
+</main></body></html>

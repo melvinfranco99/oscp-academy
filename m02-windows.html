@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Windows esencial · OSCP Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css"><script src="assets/app.js" defer></script>
+</head>
+<body data-page="m02"><main>
+<div class="kicker">Módulo 2 · Nivel básico</div>
+<h1>Windows esencial</h1>
+<p class="lead">La otra mitad del examen (y todo Active Directory) es Windows. Necesitas manejarte en su línea de comandos tan bien como en Linux.</p>
+<div class="toc"><b>En este módulo</b><ol>
+<li><a href="#estructura">Estructura de carpetas</a></li>
+<li><a href="#cuentas">Cuentas: usuario, Administrator y SYSTEM</a></li>
+<li><a href="#cmd">CMD y PowerShell</a></li>
+<li><a href="#perms">Permisos NTFS e icacls</a></li>
+<li><a href="#priv">Privilegios y UAC</a></li>
+<li><a href="#reg">Registro, servicios y tareas</a></li>
+<li><a href="#practica">Prácticas y cuestionario</a></li>
+</ol></div>
+
+<h2 id="estructura">1. Estructura de carpetas</h2>
+<div class="tbl"><table>
+<tr><th>Ruta</th><th>Qué hay</th><th>Equivalente Linux</th></tr>
+<tr><td><code>C:\Windows\System32</code></td><td>Programas y DLL del sistema</td><td><code>/usr/bin</code>, <code>/lib</code></td></tr>
+<tr><td><code>C:\Users\&lt;nombre&gt;</code></td><td>Carpetas personales (Desktop, Documents…)</td><td><code>/home/&lt;nombre&gt;</code></td></tr>
+<tr><td><code>C:\Program Files</code> y <code>(x86)</code></td><td>Programas instalados</td><td><code>/opt</code>, <code>/usr</code></td></tr>
+<tr><td><code>C:\ProgramData</code></td><td>Datos de programas (oculta)</td><td><code>/var/lib</code></td></tr>
+<tr><td><code>C:\Windows\Temp</code></td><td>Temporales</td><td><code>/tmp</code></td></tr>
+<tr><td><code>C:\inetpub\wwwroot</code></td><td>Web de IIS (servidor web de Microsoft)</td><td><code>/var/www/html</code></td></tr>
+<tr><td><code>C:\Windows\System32\config\SAM</code></td><td>Base de datos de usuarios locales y sus hashes</td><td><code>/etc/shadow</code></td></tr>
+</table></div>
+<div class="box warn"><span class="t">Diferencias clave con Linux</span>Windows usa <b>barra invertida</b> <code>\</code>, <b>no distingue mayúsculas</b> en nombres de archivo, y los ejecutables se reconocen por la extensión (<code>.exe</code>, <code>.bat</code>, <code>.ps1</code>, <code>.msi</code>).</div>
+
+<h2 id="cuentas">2. Cuentas: usuario, Administrator y SYSTEM</h2>
+<figure class="diagram">
+<svg viewBox="0 0 640 230" role="img" aria-label="Pirámide de privilegios en Windows">
+<polygon class="b2" points="40,215 600,215 530,165 110,165"/><text x="320" y="196" text-anchor="middle" font-weight="700">Usuario estándar (ana) · grupo Users</text>
+<polygon class="b3" points="110,160 530,160 460,110 180,110"/><text x="320" y="141" text-anchor="middle" font-weight="700">Administrador local · grupo Administrators</text>
+<polygon class="b5" points="180,105 460,105 390,55 250,55"/><text x="320" y="86" text-anchor="middle" font-weight="700">NT AUTHORITY\SYSTEM</text>
+<polygon class="b4" points="250,50 390,50 320,10"/><text x="320" y="40" text-anchor="middle" font-size="11" font-weight="700">Domain Admin</text>
+</svg><figcaption>SYSTEM es la cuenta del propio sistema operativo: tiene más poder que un administrador local. En un dominio, el Domain Admin controla todos los equipos.</figcaption></figure>
+<div class="box def"><span class="t">SID</span>El <b>Security Identifier</b> es el “DNI” de cada usuario o grupo, p. ej. <code>S-1-5-21-…-500</code>. El final <b>500</b> es siempre el Administrator integrado; <b>S-1-5-18</b> es SYSTEM.</div>
+
+<h2 id="cmd">3. CMD y PowerShell</h2>
+<p><b>CMD</b> es la consola clásica. <b>PowerShell</b> es la moderna: trabaja con <i>objetos</i>, es mucho más potente y es la que usarás casi siempre.</p>
+<div class="tbl"><table>
+<tr><th>Tarea</th><th>CMD</th><th>PowerShell</th><th>Linux</th></tr>
+<tr><td>¿Quién soy?</td><td><code>whoami</code></td><td><code>whoami</code></td><td><code>whoami</code></td></tr>
+<tr><td>Listar</td><td><code>dir</code></td><td><code>Get-ChildItem</code> (<code>ls</code>)</td><td><code>ls</code></td></tr>
+<tr><td>Ver archivo</td><td><code>type a.txt</code></td><td><code>Get-Content a.txt</code> (<code>cat</code>)</td><td><code>cat</code></td></tr>
+<tr><td>Buscar texto</td><td><code>findstr /si password *.txt</code></td><td><code>Select-String</code></td><td><code>grep</code></td></tr>
+<tr><td>Usuarios locales</td><td><code>net user</code></td><td><code>Get-LocalUser</code></td><td><code>cat /etc/passwd</code></td></tr>
+<tr><td>Grupos</td><td><code>net localgroup administrators</code></td><td><code>Get-LocalGroupMember</code></td><td><code>getent group</code></td></tr>
+<tr><td>Red</td><td><code>ipconfig /all</code></td><td><code>Get-NetIPAddress</code></td><td><code>ip a</code></td></tr>
+<tr><td>Puertos</td><td><code>netstat -ano</code></td><td><code>Get-NetTCPConnection</code></td><td><code>ss -tulpn</code></td></tr>
+<tr><td>Procesos</td><td><code>tasklist</code></td><td><code>Get-Process</code></td><td><code>ps aux</code></td></tr>
+<tr><td>Info del sistema</td><td><code>systeminfo</code></td><td><code>Get-ComputerInfo</code></td><td><code>uname -a</code></td></tr>
+<tr><td>Descargar</td><td><code>certutil -urlcache -f URL f</code></td><td><code>iwr URL -OutFile f</code></td><td><code>wget</code></td></tr>
+</table></div>
+<div class="term" data-title="PowerShell · reconocimiento local"><script type="text/plain">
+PS> whoami
+corp\ana
+PS> whoami /groups | findstr /i "admin"
+// sin resultados: ana no es administradora
+PS> systeminfo | findstr /B /C:"OS Name" /C:"OS Version"
+OS Name:      Microsoft Windows Server 2019 Standard
+OS Version:   10.0.17763 N/A Build 17763
+PS> Get-ChildItem C:\Users
+Directory: C:\Users
+d-----  Administrator
+d-----  ana
+d-----  Public
+</script></div>
+<div class="box tip"><span class="t">Historial de PowerShell</span>PowerShell guarda lo que se escribe en <code>%APPDATA%\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt</code>. A veces un administrador escribió una contraseña ahí. Es una de las primeras cosas a revisar.</div>
+
+<h2 id="perms">4. Permisos NTFS e icacls</h2>
+<pre>C:\> icacls C:\Apps\servicio.exe
+C:\Apps\servicio.exe BUILTIN\Users:(F)
+                     NT AUTHORITY\SYSTEM:(F)
+                     BUILTIN\Administrators:(F)</pre>
+<div class="tbl"><table>
+<tr><th>Letra</th><th>Significado</th></tr>
+<tr><td>F</td><td>Full control (todo)</td></tr><tr><td>M</td><td>Modify (modificar)</td></tr>
+<tr><td>RX</td><td>Read &amp; execute</td></tr><tr><td>R</td><td>Read</td></tr><tr><td>W</td><td>Write</td></tr>
+</table></div>
+<div class="box warn"><span class="t">¿Ves el problema?</span>En el ejemplo, <b>Users</b> (cualquier usuario) tiene <b>F</b> sobre un ejecutable de un servicio. Si ese servicio arranca como SYSTEM, un usuario normal podría sustituir el programa. Lo estudiarás en el módulo 11.</div>
+
+<h2 id="priv">5. Privilegios y UAC</h2>
+<p>Además de grupos, Windows asigna <b>privilegios</b> concretos a las cuentas. Se ven con <code>whoami /priv</code>.</p>
+<div class="tbl"><table>
+<tr><th>Privilegio</th><th>Qué permite</th><th>¿Peligroso?</th></tr>
+<tr><td>SeImpersonatePrivilege</td><td>Actuar en nombre de otro usuario que se conecte a ti. Lo tienen las cuentas de servicio (IIS, MSSQL)</td><td>Sí: suele permitir llegar a SYSTEM</td></tr>
+<tr><td>SeBackupPrivilege</td><td>Leer cualquier archivo “para hacer copias”</td><td>Sí: permite copiar SAM/SYSTEM</td></tr>
+<tr><td>SeDebugPrivilege</td><td>Inspeccionar la memoria de cualquier proceso</td><td>Sí</td></tr>
+<tr><td>SeShutdownPrivilege</td><td>Apagar el equipo</td><td>No</td></tr>
+</table></div>
+<div class="box def"><span class="t">UAC</span><b>User Account Control</b>: la ventanita “¿Quieres permitir que esta aplicación haga cambios?”. Aunque seas administrador, tus programas se ejecutan con permisos reducidos hasta que aceptas. Por eso a veces ves que eres admin pero no puedes hacer cosas de admin (“integridad media” frente a “alta”).</div>
+
+<h2 id="reg">6. Registro, servicios y tareas programadas</h2>
+<div class="box analogy"><span class="t">El registro</span>Es el gran “archivo de configuración” de Windows, organizado como carpetas (claves) con valores. <code>HKLM</code> = configuración de la máquina; <code>HKCU</code> = del usuario actual.</div>
+<pre>reg query HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run   <span class="cm"># programas al iniciar</span>
+sc qc NombreServicio          <span class="cm"># configuración de un servicio (ruta, cuenta)</span>
+Get-Service | Where-Object Status -eq Running
+schtasks /query /fo LIST /v   <span class="cm"># tareas programadas (como cron)</span></pre>
+<div class="tbl"><table>
+<tr><th>Concepto</th><th>Linux</th><th>Windows</th></tr>
+<tr><td>Superusuario</td><td>root</td><td>Administrator / SYSTEM</td></tr>
+<tr><td>Tareas programadas</td><td>cron</td><td>Task Scheduler (schtasks)</td></tr>
+<tr><td>Servicios</td><td>systemd</td><td>Service Control Manager (sc)</td></tr>
+<tr><td>Hashes de usuarios</td><td>/etc/shadow</td><td>SAM (+ SYSTEM para descifrarla)</td></tr>
+<tr><td>Hacerse otro usuario</td><td>sudo / su</td><td>runas</td></tr>
+<tr><td>Acceso remoto</td><td>SSH</td><td>RDP (3389), WinRM (5985), SMB (445)</td></tr>
+</table></div>
+
+<h2 id="practica">Prácticas</h2>
+<div class="box tip"><span class="t">Dónde practicar</span>TryHackMe: “Windows Fundamentals 1, 2 y 3” y “Windows PowerShell”. Microsoft ofrece máquinas virtuales de evaluación de Windows Server gratis durante 180 días.</div>
+<details class="sol"><summary><span class="pill lv1">Fácil</span> Traduce de Linux a Windows</summary>
+<p class="task">Escribe el equivalente en Windows de: <code>cat notas.txt</code>, <code>ip a</code>, <code>ps aux</code>.</p>
+<p><b>Solución:</b> <code>type notas.txt</code> (o <code>Get-Content</code>), <code>ipconfig</code>, <code>tasklist</code> (o <code>Get-Process</code>).</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Interpreta whoami /priv</summary>
+<pre>Privilege Name                Description                               State
+============================= ========================================= ========
+SeChangeNotifyPrivilege       Bypass traverse checking                  Enabled
+SeImpersonatePrivilege        Impersonate a client after authentication Enabled
+SeCreateGlobalPrivilege       Create global objects                     Enabled</pre>
+<p class="task">Has entrado como la cuenta del servidor web. ¿Qué te llama la atención?</p>
+<p><b>Solución:</b> <code>SeImpersonatePrivilege</code> activado. Es muy frecuente en cuentas de servicio y es una de las vías más típicas para llegar a SYSTEM (familia de técnicas “Potato”, módulo 11).</p></details>
+<details class="sol"><summary><span class="pill lv3">Reto</span> ¿Dónde buscarías contraseñas?</summary>
+<p class="task">Enumera 5 lugares de un Windows donde a menudo quedan contraseñas olvidadas.</p>
+<p><b>Solución:</b> (1) historial de PowerShell (PSReadLine), (2) archivos de instalación desatendida <code>C:\Windows\Panther\Unattend.xml</code>, (3) <code>web.config</code> de IIS, (4) scripts y archivos .txt/.ini/.config en carpetas de usuarios y <code>C:\</code>, (5) credenciales guardadas (<code>cmdkey /list</code>) y claves del registro de programas (p. ej. autologon en <code>Winlogon</code>).</p></details>
+
+<div class="quiz" data-id="q2"></div>
+<script>
+window.QUIZ = { q2: { title: "Cuestionario · Windows", qs: [
+ {q:"¿Qué cuenta tiene más poder en un equipo Windows aislado?", o:["Guest","Usuario estándar","Administrator","NT AUTHORITY\\SYSTEM"], a:3, e:"SYSTEM es la cuenta del sistema operativo."},
+ {q:"¿Dónde se guardan los hashes de los usuarios locales?", o:["C:\\Users","SAM","boot.ini","hosts"], a:1, e:"En la base de datos SAM (necesita la clave SYSTEM para descifrarse)."},
+ {q:"Equivalente Windows de 'cat'", o:["dir","type","echo","more /s"], a:1, e:"type (CMD) o Get-Content (PowerShell)."},
+ {q:"¿Qué comando muestra tus privilegios?", t:1, a:["whoami /priv"], e:"whoami /priv."},
+ {q:"¿Qué permiso de icacls significa control total?", o:["R","RX","F","W"], a:2, e:"F = Full control."},
+ {q:"El RID 500 de un SID corresponde a…", o:["Invitado","Administrator integrado","SYSTEM","Primer usuario creado"], a:1, e:"500 = Administrator integrado."},
+ {q:"¿Qué puerto usa WinRM por HTTP?", o:["22","445","3389","5985"], a:3, e:"5985 (HTTP) y 5986 (HTTPS)."},
+ {q:"UAC sirve para…", o:["Cifrar el disco","Pedir confirmación antes de acciones con privilegios elevados","Actualizar Windows","Bloquear puertos"], a:1, e:"Separa el token normal del elevado."},
+ {q:"¿Qué privilegio suele permitir pasar de cuenta de servicio a SYSTEM?", o:["SeShutdownPrivilege","SeChangeNotifyPrivilege","SeImpersonatePrivilege","SeTimeZonePrivilege"], a:2, e:"SeImpersonatePrivilege."},
+ {q:"Equivalente de cron en Windows", o:["Task Scheduler","Registry","Event Viewer","WMI"], a:0, e:"Programador de tareas (schtasks)."}
+]}};
+</script>
+</main></body></html>

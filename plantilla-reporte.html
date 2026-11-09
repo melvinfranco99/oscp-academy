@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plantilla de reporte · OSCP Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css"><script src="assets/app.js" defer></script>
+</head>
+<body data-page="plantilla"><main>
+<div class="kicker">Plantilla descargable</div>
+<h1>Plantilla de reporte OSCP</h1>
+<p class="lead">Una plantilla en Markdown lista para rellenar, pensada para aprender la estructura. Descárgala, úsala en tus prácticas y, para el examen real, combínala con la <b>plantilla oficial de OffSec</b>.</p>
+<div class="box warn"><span class="t">Importante</span>Esta plantilla es didáctica. Para el examen oficial, descarga y usa la plantilla que OffSec publica en su panel/guía: la corrección espera ese formato exacto.</div>
+
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin:20px 0">
+<button class="btn" id="dl">⬇ Descargar plantilla .md</button>
+<button class="btn alt" id="cp">📋 Copiar todo</button>
+<button class="btn alt" id="dlEx">⬇ Descargar ejemplo rellenado</button>
+</div>
+
+<h2>Vista previa</h2>
+<pre id="tpl" data-nocopy></pre>
+
+<h2>Checklist de entrega</h2>
+<div class="tbl"><table>
+<tr><th>Antes de entregar, comprueba…</th><th>✔</th></tr>
+<tr><td>Portada con tu nombre, OSID, fecha y versión</td><td>☐</td></tr>
+<tr><td>Resumen ejecutivo comprensible para no técnicos</td><td>☐</td></tr>
+<tr><td>Alcance con todas las IPs y fechas</td><td>☐</td></tr>
+<tr><td>Cada máquina: enumeración → acceso → escalada, reproducible</td><td>☐</td></tr>
+<tr><td>Captura de cada <code>local.txt</code> con comando + ip a/ipconfig</td><td>☐</td></tr>
+<tr><td>Captura de cada <code>proof.txt</code> con whoami (root/system) + ip a/ipconfig</td><td>☐</td></tr>
+<tr><td>Cadena completa de Active Directory documentada</td><td>☐</td></tr>
+<tr><td>Todos los comandos en bloques de código, no en imágenes</td><td>☐</td></tr>
+<tr><td>Numeración de capturas coherente con el texto</td><td>☐</td></tr>
+<tr><td>Exportado a PDF, revisado visualmente</td><td>☐</td></tr>
+<tr><td>Comprimido (.7z) y subido antes de las 24 h</td><td>☐</td></tr>
+</table></div>
+
+<script>
+const TPL = String.raw`# Reporte de Examen de Certificación OSCP
+
+**Candidato:** Tu Nombre
+**OSID:** OS-XXXXX
+**Correo:** tucorreo@ejemplo.com
+**Fecha:** 2026-01-01
+**Versión del documento:** 1.0
+
+---
+
+## 1. Resumen ejecutivo
+
+Este documento detalla los resultados del examen de certificación OSCP. El objetivo
+fue comprometer los sistemas del entorno proporcionado y obtener el máximo nivel de
+privilegios en cada uno, documentando cada paso de forma reproducible.
+
+Durante el examen se obtuvo acceso de administrador/root en N de M sistemas y se
+comprometió el dominio de Active Directory hasta el nivel de Domain Admin. A
+continuación se resume el resultado por objetivo.
+
+| Objetivo        | IP               | Acceso inicial | Privilegios máximos | Puntos |
+|-----------------|------------------|----------------|---------------------|--------|
+| Standalone 1    | 192.168.x.101    | Sí             | Sí (root)           | 20     |
+| Standalone 2    | 192.168.x.102    | Sí             | Sí (SYSTEM)         | 20     |
+| Standalone 3    | 192.168.x.103    | Sí             | Parcial             | 10     |
+| AD - cliente    | 192.168.x.21     | Sí             | Sí                  | 10     |
+| AD - servidor   | 192.168.x.22     | Sí             | Sí                  | 10     |
+| AD - DC         | 192.168.x.10     | Sí             | Sí (Domain Admin)   | 20     |
+| **Total**       |                  |                |                     | **90** |
+
+## 2. Alcance y metodología
+
+**Alcance:** se autorizó la prueba de las siguientes direcciones IP durante la
+ventana del examen. No se realizó ninguna acción fuera de este alcance.
+
+- 192.168.x.101, 192.168.x.102, 192.168.x.103 (máquinas independientes)
+- 192.168.x.10, 192.168.x.21, 192.168.x.22 (conjunto de Active Directory)
+
+**Metodología:** reconocimiento y enumeración de servicios, identificación de
+vulnerabilidades, explotación, escalada de privilegios y, en el conjunto de AD,
+movimiento lateral hasta el controlador de dominio.
+
+---
+
+## 3. Máquinas independientes
+
+### 3.1 · 192.168.x.101
+
+#### 3.1.1 Enumeración
+
+Descripción de lo realizado.
+
+~~~bash
+nmap -p- --min-rate 2000 -Pn -oN full.nmap 192.168.x.101
+nmap -p <abiertos> -sC -sV -Pn -oN detalle.nmap 192.168.x.101
+~~~
+
+Resultado relevante (recortado):
+
+~~~
+PORT   STATE SERVICE VERSION
+80/tcp open  http    <producto y versión>
+~~~
+
+*[Captura 3.1.1 — resultado de nmap]*
+
+#### 3.1.2 Acceso inicial
+
+Explicación del fallo identificado y de cómo se aprovechó, paso a paso, con los
+comandos exactos. El objetivo es que el proceso sea reproducible.
+
+~~~bash
+<comando que lleva al acceso>
+~~~
+
+*[Captura 3.1.2 — shell como <usuario>]*
+
+Prueba de la flag de usuario:
+
+~~~bash
+whoami && hostname && ip a       # o ipconfig en Windows
+cat local.txt                    # o type local.txt
+~~~
+
+*[Captura 3.1.3 — local.txt + identidad + IP de la máquina]*
+
+local.txt: ` + "`" + `<valor>` + "`" + `
+
+#### 3.1.3 Escalada de privilegios
+
+Enumeración local realizada y vector encontrado.
+
+~~~bash
+<comandos de enumeración y de escalada>
+~~~
+
+*[Captura 3.1.4 — enumeración relevante]*
+
+Prueba de privilegios máximos:
+
+~~~bash
+whoami            # root / nt authority\system
+ip a              # o ipconfig
+cat proof.txt     # o type proof.txt
+~~~
+
+*[Captura 3.1.5 — proof.txt + whoami + IP]*
+
+proof.txt: ` + "`" + `<valor>` + "`" + `
+
+---
+
+### 3.2 · 192.168.x.102
+(misma estructura)
+
+### 3.3 · 192.168.x.103
+(misma estructura)
+
+---
+
+## 4. Active Directory
+
+### 4.1 Resumen del recorrido
+Breve narración: credenciales iniciales → enumeración → credenciales nuevas →
+movimiento lateral → compromiso del dominio. Incluir un diagrama si es posible.
+
+### 4.2 Acceso inicial (192.168.x.21)
+(enumeración, acceso, escalada local, local.txt / proof.txt como arriba)
+
+### 4.3 Movimiento lateral (192.168.x.22)
+(cómo se reutilizaron credenciales/hashes, pruebas)
+
+### 4.4 Compromiso del Dominio (192.168.x.10 — DC)
+(cómo se llegó a Domain Admin, extracción de credenciales, proof.txt del DC)
+
+---
+
+## 5. Anexos
+
+### 5.1 Comandos y scripts auxiliares
+Listado de scripts propios o comandos largos usados.
+
+### 5.2 Referencias
+Fuentes públicas consultadas (avisos de seguridad, documentación).
+`;
+
+const EJEMPLO = String.raw`# Reporte OSCP — EJEMPLO DIDÁCTICO (máquina de laboratorio)
+
+**Candidato:** Alumno de Ejemplo   **OSID:** OS-00000   **Fecha:** 2026-01-01   **Versión:** 1.0
+
+## 1. Resumen ejecutivo
+Se comprometió por completo la máquina de laboratorio 192.168.56.101, obteniendo
+acceso inicial a través de un panel de administración con credenciales por defecto y
+privilegios de root mediante una entrada de sudo mal configurada.
+
+## 3. Máquinas independientes
+
+### 3.1 · 192.168.56.101
+
+#### 3.1.1 Enumeración
+Se escanearon todos los puertos TCP.
+
+~~~bash
+nmap -p- --min-rate 2000 -Pn -oN full.nmap 192.168.56.101
+# -> 22/tcp ssh, 80/tcp http
+nmap -p 22,80 -sC -sV -Pn 192.168.56.101
+~~~
+
+Resultado: Apache sirviendo "LabCMS 1.0" en el puerto 80. El directorio /admin
+mostraba un panel de inicio de sesión.
+
+*[Captura 3.1.1 — panel /admin]*
+
+#### 3.1.2 Acceso inicial
+El panel aceptaba las credenciales por defecto documentadas del producto
+(admin:admin). Una vez dentro, la sección "Temas" permitía editar un archivo que el
+servidor interpretaba como código del lado servidor, lo que dio ejecución de comandos
+como www-data mediante una reverse shell hacia el equipo del examinador.
+
+~~~bash
+# listener en Kali
+sudo nc -lvnp 443
+# en la víctima se forzó la conexión de vuelta a 192.168.56.50:443 desde el panel
+~~~
+
+~~~bash
+id            # uid=33(www-data) gid=33(www-data)
+hostname      # labcms01
+ip a          # 192.168.56.101
+cat local.txt # 2f1a9c7e4b...
+~~~
+
+*[Captura 3.1.2 — www-data + local.txt + ip a]*
+
+local.txt: ` + "`" + `2f1a9c7e4b8d6f0a3c5e7b9d1f2a4c6e` + "`" + `
+
+#### 3.1.3 Escalada de privilegios
+La enumeración mostró que www-data podía ejecutar un binario como root sin contraseña.
+
+~~~bash
+sudo -l
+# (root) NOPASSWD: /usr/bin/awk
+# awk permite ejecutar comandos del sistema; al correr como root, la shell es de root
+~~~
+
+*[Captura 3.1.4 — sudo -l]*
+
+~~~bash
+whoami        # root
+ip a          # 192.168.56.101
+cat /root/proof.txt   # 8d3f...
+~~~
+
+*[Captura 3.1.5 — root + proof.txt + ip a]*
+
+proof.txt: ` + "`" + `8d3f6a1c9e2b5d7f0a4c8e1b3d5f7a9c` + "`" + `
+
+## 5. Anexos
+Referencia pública: documentación del producto donde constan las credenciales por
+defecto; página de GTFOBins para 'awk'.
+`;
+
+document.getElementById("tpl").textContent = TPL;
+function download(name, text){
+  const b = new Blob([text], {type:"text/markdown"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(b); a.download = name; a.click(); URL.revokeObjectURL(a.href);
+}
+document.getElementById("dl").onclick = () => download("plantilla-oscp.md", TPL);
+document.getElementById("dlEx").onclick = () => download("ejemplo-reporte-oscp.md", EJEMPLO);
+document.getElementById("cp").onclick = (e) => {
+  (navigator.clipboard ? navigator.clipboard.writeText(TPL) : Promise.reject()).then(
+    () => { e.target.textContent = "✓ Copiado"; setTimeout(()=>e.target.textContent="📋 Copiar todo",1500); },
+    () => { e.target.textContent = "Usa el botón de descargar"; });
+};
+</script>
+</main></body></html>

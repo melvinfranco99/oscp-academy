@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Simulacro final · OSCP Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css"><script src="assets/app.js" defer></script>
+</head>
+<body data-page="simulacro"><main>
+<div class="kicker">Simulacro final</div>
+<h1>Examen final de teoría</h1>
+<p class="lead">40 preguntas que recorren todo el curso. Simula la presión: ponte el cronómetro, no mires los temas y apunta a <b>≥ 80%</b> antes de plantearte el examen real. Al corregir verás la explicación de cada una.</p>
+
+<div class="quizbox" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+<div>⏱️ Cronómetro sugerido: <b>45 min</b></div>
+<div class="timer" id="clock">45:00</div>
+<button class="btn" id="start">Iniciar</button>
+<button class="btn alt" id="reset">Reiniciar</button>
+</div>
+
+<div class="quiz" data-id="final"></div>
+
+<h2>Práctica final sugerida</h2>
+<div class="box exam"><span class="t">El verdadero simulacro es práctico</span>Esta teoría es el calentamiento. El simulacro que de verdad te prepara es <b>hacer máquinas tipo OSCP durante 24 h seguidas y escribir el reporte</b>. Usa una lista de máquinas tipo examen (ver <a href="recursos.html">recursos</a>: listas “TJnull” para HTB/PG) y la <a href="plantilla-reporte.html">plantilla de reporte</a>.</div>
+<div class="tbl"><table>
+<tr><th>Fase del simulacro práctico</th><th>Objetivo</th></tr>
+<tr><td>Reserva 24 h sin interrupciones</td><td>Reproducir las condiciones reales</td></tr>
+<tr><td>3 máquinas independientes + un mini-AD</td><td>Imitar la estructura del examen</td></tr>
+<tr><td>Cronometra cada máquina</td><td>Detectar dónde pierdes tiempo</td></tr>
+<tr><td>Prohíbete los writeups</td><td>Entrenar la autosuficiencia</td></tr>
+<tr><td>Escribe el reporte completo al día siguiente</td><td>Practicar la parte que más gente descuida</td></tr>
+</table></div>
+
+<script>
+let total = 45*60, t = null;
+const clock = document.getElementById("clock");
+function render(){ const m = String(Math.floor(total/60)).padStart(2,"0"), s = String(total%60).padStart(2,"0"); clock.textContent = `${m}:${s}`; clock.style.color = total<300 ? "var(--bad)" : "var(--fg)"; }
+document.getElementById("start").onclick = () => {
+  if (t) return;
+  t = setInterval(() => { if (total<=0){ clearInterval(t); t=null; clock.textContent="¡Tiempo!"; return; } total--; render(); }, 1000);
+};
+document.getElementById("reset").onclick = () => { clearInterval(t); t=null; total=45*60; render(); };
+render();
+
+window.QUIZ = { final: { title: "Examen final · 40 preguntas", qs: [
+ {q:"Riesgo se define como…", o:["Vulnerabilidad + exploit","Probabilidad × impacto","CVSS ÷ 2","Amenaza − parche"], a:1, e:"Probabilidad por impacto."},
+ {q:"El superusuario de Linux es…", t:1, a:["root"], e:"root, UID 0."},
+ {q:"chmod 640 =", o:["rw-r-----","rwxr-x---","rw-rw----","r--r--r--"], a:0, e:"6=rw-,4=r--,0=---."},
+ {q:"Archivo con hashes en Linux", o:["/etc/passwd","/etc/shadow","/etc/hosts","/etc/group"], a:1, e:"/etc/shadow."},
+ {q:"Cuenta más poderosa en Windows", o:["Administrator","SYSTEM","Guest","Power User"], a:1, e:"NT AUTHORITY\\SYSTEM."},
+ {q:"Puerto de SMB", t:1, a:["445"], e:"445/TCP."},
+ {q:"Puerto de RDP", o:["22","3389","445","80"], a:1, e:"3389."},
+ {q:"Equipos útiles en un /26", o:["64","62","30","126"], a:1, e:"2^6−2=62."},
+ {q:"Orden del saludo TCP", o:["SYN, SYN-ACK, ACK","ACK, SYN, FIN","SYN, ACK, RST","HELLO, OK"], a:0, e:"SYN→SYN-ACK→ACK."},
+ {q:"Puerto 88 abierto sugiere…", o:["Impresora","Controlador de dominio","Base de datos","FTP"], a:1, e:"Kerberos → AD."},
+ {q:"Opción de nmap para todos los puertos", t:1, a:["-p-"], e:"-p-."},
+ {q:"Herramienta para buscar exploits locales de Exploit-DB", o:["searchsploit","gobuster","hydra","dig"], a:0, e:"searchsploit."},
+ {q:"Causa raíz de las inyecciones web", o:["HTTPS","Mezclar entrada de usuario con código/comandos","Cookies","Cachés"], a:1, e:"Datos tratados como instrucciones."},
+ {q:"Mejor defensa contra SQLi", o:["Ocultar errores","Consultas parametrizadas","Usar POST","Captcha"], a:1, e:"Prepared statements."},
+ {q:"../ en una ruta significa", o:["Carpeta actual","Subir un nivel","Raíz","Home"], a:1, e:"Directorio superior."},
+ {q:"Herramienta prohibida en el examen", o:["nmap","Burp Community","sqlmap","gobuster"], a:2, e:"Explotación automática."},
+ {q:"En una reverse shell inicia la conexión…", o:["El atacante","La víctima","El DNS","El router"], a:1, e:"La víctima llama a casa."},
+ {q:"Comando para escuchar en el puerto 443", o:["nc -lvnp 443","nmap 443","curl 443","ssh 443"], a:0, e:"nc -lvnp."},
+ {q:"Servidor web rápido en Python 3", t:1, a:["python3 -m http.server"], e:"python3 -m http.server."},
+ {q:"¿En cuántas máquinas vale Metasploit (explotación)?", o:["0","1","3","todas"], a:1, e:"Una."},
+ {q:"Web para abusar de binarios con privilegios", o:["GTFOBins","Shodan","crt.sh","OWASP"], a:0, e:"GTFOBins."},
+ {q:"Comando que muestra permisos de sudo", t:1, a:["sudo -l"], e:"sudo -l."},
+ {q:"find para binarios SUID", o:["find / -perm -4000 -type f 2>/dev/null","ls -l /bin","ps aux","getcap /"], a:0, e:"SUID = 4000."},
+ {q:"Script de enumeración Linux más completo", o:["WinPEAS","LinPEAS","BloodHound","Impacket"], a:1, e:"LinPEAS."},
+ {q:"Privilegio Windows que suele llevar a SYSTEM", o:["SeShutdown","SeImpersonate","SeTimeZone","SeUndock"], a:1, e:"SeImpersonatePrivilege."},
+ {q:"Script de enumeración Windows", t:1, a:["winpeas","powerup"], e:"WinPEAS/PowerUp."},
+ {q:"% del examen que es Active Directory", o:["20","40","60","80"], a:1, e:"40 puntos."},
+ {q:"Base de datos de credenciales del dominio", o:["SAM","NTDS.dit","shadow","web.config"], a:1, e:"NTDS.dit."},
+ {q:"Grupo con control total del dominio", o:["Users","Domain Admins","Guests","Backup Operators"], a:1, e:"Domain Admins."},
+ {q:"Herramienta que grafica caminos a Domain Admin", o:["BloodHound","nmap","Hydra","exiftool"], a:0, e:"BloodHound."},
+ {q:"Kerberoasting requiere…", o:["Ser DA","Cualquier usuario de dominio","Acceso físico","Un 0-day"], a:1, e:"Basta un usuario válido."},
+ {q:"Pass-the-Hash permite…", o:["Crackear","Autenticarte con el hash","Cambiar la contraseña","Borrar el hash"], a:1, e:"Usar el hash directamente."},
+ {q:"Colección de scripts Python para AD", t:1, a:["impacket"], e:"Impacket."},
+ {q:"ssh -D 1080 crea…", o:["Reenvío local","Proxy SOCKS dinámico","Reverse shell","Servidor FTP"], a:1, e:"Proxy dinámico."},
+ {q:"Obliga a otras tools a usar el proxy", t:1, a:["proxychains"], e:"proxychains."},
+ {q:"A través de SOCKS nmap usa…", o:["-sS","-sT","-sU","-O"], a:1, e:"-sT connect."},
+ {q:"Tiempo para entregar el reporte", o:["12 h","24 h","48 h","72 h"], a:1, e:"24 horas."},
+ {q:"Captura de flag válida incluye comando, flag y…", o:["La hora","ip a / ipconfig","Logo OffSec","Tu DNI"], a:1, e:"La IP/identidad de la máquina."},
+ {q:"Nota mínima para aprobar", t:1, a:["70"], e:"70/100."},
+ {q:"Cuando te atascas, lo primero es…", o:["Buscar writeup","Enumerar más y probar credenciales ya halladas","Reiniciar Kali","Rendirte"], a:1, e:"El 90% se resuelve enumerando más."}
+]}};
+</script>
+</main></body></html>

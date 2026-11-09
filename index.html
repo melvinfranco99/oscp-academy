@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OSCP Academy</title>
+<meta name="description" content="Curso visual en español para preparar el OSCP / OSCP+ desde cero.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<script src="assets/app.js" defer></script>
+</head>
+<body data-page="index">
+<main>
+<section class="hero">
+  <div class="kicker">Curso completo en español · desde cero hasta nivel OSCP+</div>
+  <h1>Aprende pentesting paso a paso y aprueba el OSCP</h1>
+  <p class="lead">Una ruta visual, con analogías, diagramas, terminales animadas, cuestionarios con solución, prácticas guiadas y una plantilla de reporte profesional. Pensada para quien sabe <b>un poquito</b> de informática.</p>
+  <div class="meta"><span class="tag">16 módulos</span><span class="tag">+250 preguntas con solución</span><span class="tag">Glosario con buscador</span><span class="tag">Plantilla de reporte</span><span class="tag">Simulacro cronometrado</span></div>
+  <p><a class="btn" href="como-estudiar.html" style="text-decoration:none;display:inline-block">Empezar el curso →</a></p>
+</section>
+
+<h2>¿Qué es el OSCP?</h2>
+<div class="box def"><span class="t">OSCP / OSCP+</span>
+El <b>OffSec Certified Professional</b> es una certificación práctica de <b>pentesting</b> (pruebas de penetración: atacar sistemas <i>con permiso</i> para encontrar sus fallos antes que los delincuentes). La da la empresa <b>OffSec</b> tras su curso <b>PEN-200</b>. Desde noviembre de 2024 quien aprueba obtiene <b>OSCP+</b> (válido 3 años) y además el OSCP clásico (sin caducidad).</div>
+<div class="box analogy"><span class="t">El cerrajero contratado</span>
+Imagina que un banco contrata a un cerrajero para que intente entrar por la noche. Si lo consigue, no roba nada: <b>apunta cómo entró</b> y entrega un informe para que el banco cambie las cerraduras. Eso es un pentester. El OSCP demuestra que sabes ser ese cerrajero… y escribir el informe.</div>
+
+<h3>Formato del examen (resumen)</h3>
+<div class="tbl"><table>
+<tr><th>Parte</th><th>Qué hay</th><th>Puntos</th></tr>
+<tr><td>Máquinas independientes</td><td>3 máquinas sueltas. Cada una: acceso inicial (10) + privilegios máximos (10)</td><td>60</td></tr>
+<tr><td>Active Directory</td><td>Un dominio de 3 máquinas. Empiezas con unas credenciales de usuario normal (“brecha asumida”) y debes llegar a administrador del dominio</td><td>40</td></tr>
+<tr><td><b>Para aprobar</b></td><td>Examen práctico de <b>23 h 45 min</b> + reporte profesional entregado en las <b>24 h siguientes</b></td><td><b>70 / 100</b></td></tr>
+</table></div>
+<div class="box warn"><span class="t">Las reglas cambian</span>
+OffSec actualiza el examen de vez en cuando (herramientas permitidas, puntos, formato). Antes de presentarte, lee siempre la <b>OSCP Exam Guide</b> oficial en <a href="https://help.offsec.com" target="_blank" rel="noopener">help.offsec.com</a>. Aquí verás las normas importantes en el <a href="m15-examen.html">módulo 15</a>.</div>
+
+<h2>Tu ruta de aprendizaje</h2>
+<figure class="diagram">
+<svg viewBox="0 0 820 190" role="img" aria-label="Ruta: bases, pentesting, nivel OSCP, examen">
+  <path class="ln flow" d="M120 95 H700"/>
+  <g><rect class="b2" x="20" y="45" width="170" height="100" rx="14"/><text x="105" y="85" text-anchor="middle" font-weight="700">1 · Bases</text><text x="105" y="108" text-anchor="middle" class="small">Linux · Windows</text><text x="105" y="126" text-anchor="middle" class="small">Redes · Scripting</text></g>
+  <g><rect class="b1" x="220" y="45" width="170" height="100" rx="14"/><text x="305" y="85" text-anchor="middle" font-weight="700">2 · Pentesting</text><text x="305" y="108" text-anchor="middle" class="small">Enumeración · Web</text><text x="305" y="126" text-anchor="middle" class="small">Explotación · Hashes</text></g>
+  <g><rect class="b3" x="420" y="45" width="170" height="100" rx="14"/><text x="505" y="85" text-anchor="middle" font-weight="700">3 · Nivel OSCP</text><text x="505" y="108" text-anchor="middle" class="small">Escalada Linux/Win</text><text x="505" y="126" text-anchor="middle" class="small">AD · Pivoting</text></g>
+  <g><rect class="b5" x="620" y="45" width="180" height="100" rx="14"/><text x="710" y="85" text-anchor="middle" font-weight="700">4 · Examen</text><text x="710" y="108" text-anchor="middle" class="small">Reporte · Estrategia</text><text x="710" y="126" text-anchor="middle" class="small">Simulacro</text></g>
+  <text x="105" y="30" text-anchor="middle" class="small">semanas 1–4</text><text x="305" y="30" text-anchor="middle" class="small">semanas 5–10</text><text x="505" y="30" text-anchor="middle" class="small">semanas 11–18</text><text x="710" y="30" text-anchor="middle" class="small">semanas 19–24</text>
+  <text x="410" y="178" text-anchor="middle" class="small">Plan orientativo para ~10 h/semana. Ve a tu ritmo: lo importante es entender, no correr.</text>
+</svg>
+</figure>
+
+<div class="roadmap" id="roadmap"></div>
+
+<h2>Así son las lecciones</h2>
+<div class="grid">
+  <div class="card"><div class="emoji">📘</div><h4>Definiciones</h4><p>Cada término nuevo, explicado en una frase sencilla.</p></div>
+  <div class="card"><div class="emoji">💡</div><h4>Analogías</h4><p>Comparaciones con la vida real para que lo abstracto se entienda.</p></div>
+  <div class="card"><div class="emoji">🗺️</div><h4>Diagramas</h4><p>Dibujos animados de redes, flujos y ataques.</p></div>
+  <div class="card"><div class="emoji">▶️</div><h4>Terminales animadas</h4><p>Pulsa “Reproducir” y verás un comando escribiéndose y su resultado, como un vídeo.</p></div>
+  <div class="card"><div class="emoji">📝</div><h4>Cuestionarios</h4><p>Test con corrección automática y explicación de cada respuesta.</p></div>
+  <div class="card"><div class="emoji">🧪</div><h4>Prácticas</h4><p>Ejercicios por niveles 🟢🟠🔴 con la solución desplegable.</p></div>
+</div>
+
+<div class="box warn"><span class="t">Ética y ley</span>
+Todo lo que aprendas aquí se practica <b>solo</b> en sistemas propios o en laboratorios autorizados (PEN-200, Hack The Box, TryHackMe, Proving Grounds…). Atacar un sistema sin permiso por escrito es delito en casi todos los países (en España, art. 197 bis del Código Penal).</div>
+
+<div class="term" data-title="bienvenida.sh"><script type="text/plain">
+$ whoami
+futuro-oscp
+$ cat objetivo.txt
+Aprender a pensar como un pentester, paso a paso.
+// Pulsa los botones ▶ de cada lección para ver los ejemplos en acción.
+</script></div>
+
+<script>
+window.pageInit = () => {
+  const colors = ["var(--c2)","var(--c1)","var(--c3)","var(--c5)"];
+  const lvl = id => { const n = parseInt(id.slice(1)); return n<=4?0:n<=9?1:n<=13?2:3; };
+  const done = (()=>{try{return JSON.parse(localStorage.getItem("oscp:done"))||{}}catch(e){return {}}})();
+  document.getElementById("roadmap").innerHTML = MODS.map(m =>
+    `<a class="rm" href="${m.f}"><span class="n" style="background:${colors[lvl(m.id)]}">${m.n}</span><span><b>${m.t}</b><small>${done[m.id]?"✔ completado":"pendiente"}</small></span></a>`).join("");
+};
+</script>
+</main>
+</body>
+</html>

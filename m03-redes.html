@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Redes desde cero · OSCP Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css"><script src="assets/app.js" defer></script>
+</head>
+<body data-page="m03"><main>
+<div class="kicker">Módulo 3 · Nivel básico (tipo CompTIA Network+)</div>
+<h1>Redes desde cero</h1>
+<p class="lead">Atacas máquinas a través de la red. Si entiendes cómo viajan los datos, entenderás por qué funcionan (o no) las herramientas.</p>
+<div class="toc"><b>En este módulo</b><ol>
+<li><a href="#ip">Direcciones IP y subredes</a></li>
+<li><a href="#capas">Modelo de capas (OSI / TCP-IP)</a></li>
+<li><a href="#puertos">Puertos y servicios</a></li>
+<li><a href="#tcp">TCP, UDP y el saludo de 3 pasos</a></li>
+<li><a href="#dns">DNS</a></li>
+<li><a href="#http">HTTP: cómo habla la web</a></li>
+<li><a href="#nat">NAT, routers, firewalls y VPN</a></li>
+<li><a href="#practica">Prácticas y cuestionario</a></li>
+</ol></div>
+
+<h2 id="ip">1. Direcciones IP y subredes</h2>
+<div class="box analogy"><span class="t">Calles y portales</span>La <b>IP</b> es la dirección postal de un equipo. La <b>red</b> (subred) es la calle; el último número suele ser el portal. La <b>máscara</b> dice qué parte de la dirección es “la calle” y qué parte “el portal”. El <b>puerto</b> sería el piso/puerta dentro del edificio.</div>
+<figure class="diagram">
+<svg viewBox="0 0 700 150" role="img" aria-label="IP dividida en red y host">
+<g font-family="JetBrains Mono" font-size="26" font-weight="700" text-anchor="middle">
+<rect class="b1" x="40" y="20" width="140" height="50" rx="8"/><text x="110" y="55">192</text>
+<rect class="b1" x="190" y="20" width="140" height="50" rx="8"/><text x="260" y="55">168</text>
+<rect class="b1" x="340" y="20" width="140" height="50" rx="8"/><text x="410" y="55">1</text>
+<rect class="b2" x="490" y="20" width="140" height="50" rx="8"/><text x="560" y="55">25</text></g>
+<text x="260" y="100" text-anchor="middle" font-weight="700">parte de red (24 bits)</text><text x="560" y="100" text-anchor="middle" font-weight="700">host (8 bits)</text>
+<text x="335" y="135" text-anchor="middle" class="small">192.168.1.25/24 · máscara 255.255.255.0 · 254 equipos posibles (192.168.1.1 – .254)</text>
+</svg></figure>
+<p>Una IPv4 tiene 4 números de 0 a 255 (32 bits). La notación <b>CIDR</b> <code>/24</code> indica cuántos bits son de red.</p>
+<div class="tbl"><table>
+<tr><th>CIDR</th><th>Máscara</th><th>Equipos útiles</th><th>Ejemplo</th></tr>
+<tr><td>/8</td><td>255.0.0.0</td><td>16.777.214</td><td>10.0.0.0/8</td></tr>
+<tr><td>/16</td><td>255.255.0.0</td><td>65.534</td><td>172.16.0.0/16</td></tr>
+<tr><td>/24</td><td>255.255.255.0</td><td>254</td><td>192.168.1.0/24</td></tr>
+<tr><td>/30</td><td>255.255.255.252</td><td>2</td><td>enlaces punto a punto</td></tr>
+<tr><td>/32</td><td>255.255.255.255</td><td>1</td><td>un único equipo</td></tr>
+</table></div>
+<div class="box def"><span class="t">IPs privadas</span>Rangos reservados para redes internas, no salen a Internet: <code>10.0.0.0/8</code>, <code>172.16.0.0/12</code>, <code>192.168.0.0/16</code>. <code>127.0.0.1</code> (localhost) es “yo mismo”. En el examen y en los labs todas las máquinas usan IPs privadas a través de una VPN.</div>
+<p><b>Fórmula rápida</b>: equipos útiles = 2<sup>(32 − CIDR)</sup> − 2 (se restan la dirección de red y la de broadcast).</p>
+
+<h2 id="capas">2. Modelo de capas</h2>
+<div class="box analogy"><span class="t">Enviar un paquete por correo</span>Escribes una carta (datos), la metes en un sobre con el piso (puerto), luego en una caja con la dirección (IP), y el cartero la lleva por la calle (cable/Wi-Fi). Al llegar, se desempaqueta en orden inverso. Cada capa añade su “envoltorio”.</div>
+<div class="tbl"><table>
+<tr><th>OSI</th><th>TCP/IP</th><th>Qué hace</th><th>Ejemplos</th><th>Unidad</th></tr>
+<tr><td>7 Aplicación<br>6 Presentación<br>5 Sesión</td><td>Aplicación</td><td>Lo que usa el programa</td><td>HTTP, DNS, SMB, SSH, FTP</td><td>Datos</td></tr>
+<tr><td>4 Transporte</td><td>Transporte</td><td>Puertos, fiabilidad</td><td>TCP, UDP</td><td>Segmento</td></tr>
+<tr><td>3 Red</td><td>Internet</td><td>Direcciones IP, rutas</td><td>IP, ICMP (ping)</td><td>Paquete</td></tr>
+<tr><td>2 Enlace</td><td rowspan="2">Acceso a red</td><td>Direcciones MAC dentro de la red local</td><td>Ethernet, ARP, Wi-Fi</td><td>Trama</td></tr>
+<tr><td>1 Física</td><td>Señales</td><td>Cable, radio</td><td>Bits</td></tr>
+</table></div>
+<p>Truco para memorizar OSI de abajo arriba: <b>F</b>ísica, <b>E</b>nlace, <b>R</b>ed, <b>T</b>ransporte, <b>S</b>esión, <b>P</b>resentación, <b>A</b>plicación → “<b>F</b>ui <b>E</b>n <b>R</b>ed <b>T</b>odo <b>S</b>in <b>P</b>edir <b>A</b>yuda”.</p>
+
+<h2 id="puertos">3. Puertos y servicios</h2>
+<p>Un equipo tiene 65.535 puertos TCP y otros tantos UDP. Cada servicio “escucha” en uno. Estos son los que verás una y otra vez:</p>
+<div class="tbl"><table>
+<tr><th>Puerto</th><th>Servicio</th><th>Para qué sirve</th><th>Qué mira un pentester</th></tr>
+<tr><td>21</td><td>FTP</td><td>Transferir archivos</td><td>Acceso anónimo, versión</td></tr>
+<tr><td>22</td><td>SSH</td><td>Consola remota cifrada</td><td>Credenciales reutilizadas, claves privadas</td></tr>
+<tr><td>25</td><td>SMTP</td><td>Envío de correo</td><td>Enumerar usuarios</td></tr>
+<tr><td>53</td><td>DNS</td><td>Traducir nombres a IPs</td><td>Transferencia de zona</td></tr>
+<tr><td>80 / 443</td><td>HTTP / HTTPS</td><td>Web</td><td>Casi siempre, la puerta de entrada</td></tr>
+<tr><td>88</td><td>Kerberos</td><td>Autenticación de dominio</td><td>Indica controlador de dominio (AD)</td></tr>
+<tr><td>110 / 143</td><td>POP3 / IMAP</td><td>Leer correo</td><td>Correos con credenciales</td></tr>
+<tr><td>111 / 2049</td><td>RPC / NFS</td><td>Carpetas compartidas Unix</td><td>Recursos montables</td></tr>
+<tr><td>135 / 139 / 445</td><td>RPC / NetBIOS / SMB</td><td>Compartir archivos Windows</td><td>Recursos compartidos, null session</td></tr>
+<tr><td>161 (UDP)</td><td>SNMP</td><td>Monitorizar dispositivos</td><td>Comunidad “public”, información interna</td></tr>
+<tr><td>389 / 636</td><td>LDAP / LDAPS</td><td>Directorio (AD)</td><td>Usuarios, grupos, descripciones</td></tr>
+<tr><td>1433</td><td>MSSQL</td><td>Base de datos Microsoft</td><td>Credenciales por defecto</td></tr>
+<tr><td>3306</td><td>MySQL</td><td>Base de datos</td><td>Acceso con credenciales halladas</td></tr>
+<tr><td>3389</td><td>RDP</td><td>Escritorio remoto Windows</td><td>Acceso gráfico con credenciales</td></tr>
+<tr><td>5432</td><td>PostgreSQL</td><td>Base de datos</td><td>Credenciales</td></tr>
+<tr><td>5985 / 5986</td><td>WinRM</td><td>PowerShell remoto</td><td>Acceso con credenciales (evil-winrm)</td></tr>
+<tr><td>8080 / 8443</td><td>HTTP alternativo</td><td>Paneles, Tomcat, Jenkins…</td><td>Paneles de administración</td></tr>
+</table></div>
+
+<h2 id="tcp">4. TCP, UDP y el saludo de 3 pasos</h2>
+<div class="cols">
+<div class="card"><h4>📞 TCP = llamada telefónica</h4><p>Primero se establece la conexión, se confirma que todo llega en orden y se cuelga al terminar. Fiable. Web, SSH, SMB.</p></div>
+<div class="card"><h4>📮 UDP = postal sin acuse</h4><p>Se envía y ya. Rápido pero sin garantías. DNS, SNMP, streaming, juegos.</p></div>
+</div>
+<figure class="diagram">
+<svg viewBox="0 0 640 270" role="img" aria-label="Three-way handshake TCP">
+<defs><marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--fg2)"/></marker></defs>
+<rect class="b1" x="30" y="10" width="140" height="40" rx="8"/><text x="100" y="35" text-anchor="middle" font-weight="700">Kali (cliente)</text>
+<rect class="b2" x="470" y="10" width="140" height="40" rx="8"/><text x="540" y="35" text-anchor="middle" font-weight="700">Servidor :80</text>
+<path class="ln dash" d="M100 50 V260 M540 50 V260"/>
+<path class="ln" marker-end="url(#a3)" d="M100 80 L540 120"/><text x="320" y="88" text-anchor="middle" font-weight="700">1 · SYN  “¿hablamos?”</text>
+<path class="ln" marker-end="url(#a3)" d="M540 145 L100 185"/><text x="320" y="153" text-anchor="middle" font-weight="700">2 · SYN-ACK  “sí, hablemos”</text>
+<path class="ln" marker-end="url(#a3)" d="M100 210 L540 250"/><text x="320" y="218" text-anchor="middle" font-weight="700">3 · ACK  “perfecto”</text>
+<circle r="7" fill="var(--c3)"><animateMotion dur="4.5s" repeatCount="indefinite" path="M100 80 L540 120 L540 145 L100 185 L100 210 L540 250"/></circle>
+</svg><figcaption>Si el puerto está cerrado, el servidor responde RST (“aquí no hay nadie”). Si un firewall lo filtra, no responde nada. Así decide nmap si un puerto está <b>open</b>, <b>closed</b> o <b>filtered</b>.</figcaption></figure>
+
+<h2 id="dns">5. DNS</h2>
+<div class="box analogy"><span class="t">La agenda del móvil</span>Tú buscas “Mamá” y el móvil marca el número. DNS traduce <code>empresa.com</code> a <code>93.184.216.34</code>.</div>
+<div class="tbl"><table>
+<tr><th>Registro</th><th>Qué guarda</th></tr>
+<tr><td>A / AAAA</td><td>Nombre → IPv4 / IPv6</td></tr>
+<tr><td>CNAME</td><td>Alias de otro nombre</td></tr>
+<tr><td>MX</td><td>Servidor de correo</td></tr>
+<tr><td>NS</td><td>Servidores DNS del dominio</td></tr>
+<tr><td>TXT</td><td>Texto libre (verificaciones, SPF)</td></tr>
+<tr><td>PTR</td><td>IP → nombre (inverso)</td></tr>
+<tr><td>SRV</td><td>Servicios, p. ej. dónde está el controlador de dominio</td></tr>
+</table></div>
+<pre>nslookup empresa.com
+dig empresa.com MX
+dig axfr @10.10.10.5 empresa.local     <span class="cm"># intento de transferencia de zona (solo en tu lab)</span></pre>
+<div class="box exam"><span class="t">El archivo hosts</span>En los labs las webs suelen usar nombres (<code>http://intranet.corp.local</code>) que no existen en Internet. Debes añadirlos a <code>/etc/hosts</code> en Kali: <code>echo "10.10.10.5 intranet.corp.local" | sudo tee -a /etc/hosts</code>. Si una web “no carga bien” o redirige a un nombre, piensa en esto.</div>
+
+<h2 id="http">6. HTTP: cómo habla la web</h2>
+<div class="cols">
+<pre>GET /login.php?user=ana HTTP/1.1
+Host: intranet.corp.local
+User-Agent: Mozilla/5.0
+Cookie: PHPSESSID=abc123</pre>
+<pre>HTTP/1.1 200 OK
+Server: Apache/2.4.41 (Ubuntu)
+Set-Cookie: PHPSESSID=abc123
+Content-Type: text/html
+
+&lt;html&gt;...</pre>
+</div>
+<div class="tbl"><table>
+<tr><th>Elemento</th><th>Explicación</th></tr>
+<tr><td>Métodos</td><td><b>GET</b> pide algo (parámetros en la URL), <b>POST</b> envía datos (en el cuerpo, p. ej. formularios), PUT, DELETE…</td></tr>
+<tr><td>Códigos</td><td><b>200</b> OK · <b>301/302</b> redirección · <b>401</b> requiere login · <b>403</b> prohibido · <b>404</b> no existe · <b>500</b> error del servidor</td></tr>
+<tr><td>Cabeceras</td><td>Metadatos. <code>Server</code> revela el software y versión</td></tr>
+<tr><td>Cookies</td><td>“Pulsera del festival”: identifican tu sesión tras hacer login</td></tr>
+</table></div>
+
+<h2 id="nat">7. NAT, routers, firewalls y VPN</h2>
+<figure class="diagram">
+<svg viewBox="0 0 760 200" role="img" aria-label="Red de laboratorio a través de VPN">
+<rect class="b1" x="10" y="70" width="130" height="60" rx="10"/><text x="75" y="97" text-anchor="middle" font-weight="700">Tu Kali</text><text x="75" y="117" text-anchor="middle" class="small">tun0: 192.168.45.x</text>
+<path class="ln flow" d="M140 100 H260"/><text x="200" y="88" text-anchor="middle" class="small">VPN cifrada</text>
+<rect class="b4" x="260" y="70" width="120" height="60" rx="10"/><text x="320" y="105" text-anchor="middle" font-weight="700">Gateway</text>
+<path class="ln" d="M380 100 H430 V40 H480 M430 100 H480 M430 100 V160 H480"/>
+<rect class="b2" x="480" y="20" width="150" height="40" rx="8"/><text x="555" y="45" text-anchor="middle">192.168.x.101</text>
+<rect class="b2" x="480" y="80" width="150" height="40" rx="8"/><text x="555" y="105" text-anchor="middle">192.168.x.102</text>
+<rect class="b3" x="480" y="140" width="150" height="40" rx="8"/><text x="555" y="165" text-anchor="middle">DC01 (AD)</text>
+<text x="700" y="105" text-anchor="middle" class="small">red del</text><text x="700" y="121" text-anchor="middle" class="small">examen</text>
+</svg><figcaption>En los labs y el examen te conectas por OpenVPN. Tu IP útil es la de la interfaz <code>tun0</code>: es la que pondrás cuando una máquina tenga que conectarse de vuelta a ti.</figcaption></figure>
+<div class="tbl"><table>
+<tr><th>Elemento</th><th>Qué hace</th></tr>
+<tr><td>Router</td><td>Conecta redes distintas y decide por dónde va cada paquete</td></tr>
+<tr><td>NAT</td><td>Muchos equipos privados salen a Internet con una sola IP pública</td></tr>
+<tr><td>Firewall</td><td>Portero que deja pasar o bloquea tráfico según reglas (puerto, IP, dirección)</td></tr>
+<tr><td>VPN</td><td>Túnel cifrado que te mete “dentro” de otra red</td></tr>
+<tr><td>ARP</td><td>Traduce IP → dirección MAC dentro de la red local</td></tr>
+</table></div>
+<pre>ip a show tun0          <span class="cm"># tu IP en la VPN</span>
+ping -c 3 10.10.10.5    <span class="cm"># ¿responde? (muchos Windows bloquean ping: que no responda no significa que esté apagado)</span>
+traceroute 10.10.10.5   <span class="cm"># por qué routers pasa</span></pre>
+
+<h2 id="practica">Prácticas</h2>
+<details class="sol"><summary><span class="pill lv1">Fácil</span> ¿Cuántos equipos?</summary>
+<p class="task">¿Cuántos equipos útiles caben en un /26? ¿Y en un /28?</p>
+<p><b>Solución:</b> /26 → 2<sup>6</sup> − 2 = <b>62</b>. /28 → 2<sup>4</sup> − 2 = <b>14</b>.</p></details>
+<details class="sol"><summary><span class="pill lv1">Fácil</span> Asocia puerto y servicio</summary>
+<p class="task">445, 3389, 22, 88, 5985</p>
+<p><b>Solución:</b> SMB, RDP, SSH, Kerberos, WinRM.</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Deduce el sistema</summary>
+<p class="task">Un equipo tiene abiertos 53, 88, 135, 139, 389, 445, 464, 636, 3268, 5985. ¿Qué es?</p>
+<p><b>Solución:</b> Un <b>controlador de dominio</b> de Active Directory: DNS (53) + Kerberos (88, 464) + LDAP (389, 636) + Catálogo Global (3268) + SMB + WinRM.</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Captura con Wireshark</summary>
+<p class="task">Abre Wireshark en Kali, captura en tu interfaz y visita <code>http://neverssl.com</code>. Filtra con <code>http</code> y localiza la petición GET y la respuesta 200. Después filtra con <code>tcp.flags.syn==1</code>.</p>
+<p><b>Solución:</b> Verás el GET con la cabecera Host, y la respuesta con el HTML en claro (HTTP no va cifrado). Con el segundo filtro verás los SYN y SYN-ACK del saludo de 3 pasos. Conclusión: lo que va por HTTP o FTP se puede leer si alguien captura el tráfico.</p></details>
+<details class="sol"><summary><span class="pill lv3">Reto</span> ¿Por qué no llega la conexión?</summary>
+<p class="task">Has hecho que una máquina del lab se conecte a <code>192.168.1.50</code> (la IP de tu casa) y no llega nada. ¿Qué ha fallado?</p>
+<p><b>Solución:</b> La máquina del lab no puede ver tu red doméstica: solo ve la IP de tu interfaz VPN (<code>tun0</code>). Debes usar esa IP. Además, comprueba que tienes un programa escuchando en ese puerto y que el firewall de la máquina permite conexiones salientes por él (prueba puertos comunes como 80 o 443).</p></details>
+
+<div class="quiz" data-id="q3"></div>
+<script>
+window.QUIZ = { q3: { title: "Cuestionario · Redes", qs: [
+ {q:"¿Cuántos equipos útiles caben en un /24?", o:["256","255","254","24"], a:2, e:"2^8 − 2 = 254."},
+ {q:"¿Qué orden tiene el saludo TCP?", o:["ACK, SYN, SYN-ACK","SYN, SYN-ACK, ACK","SYN, ACK, FIN","HELLO, OK, ACK"], a:1, e:"SYN → SYN-ACK → ACK."},
+ {q:"¿Qué puerto usa SMB?", t:1, a:["445"], e:"SMB moderno: 445/TCP."},
+ {q:"¿Qué servicio usa normalmente UDP 161?", o:["DNS","SNMP","Kerberos","RDP"], a:1, e:"SNMP."},
+ {q:"¿Cuál de estas IPs es privada?", o:["8.8.8.8","172.20.4.1","1.1.1.1","200.10.10.10"], a:1, e:"172.16.0.0/12 abarca de 172.16 a 172.31."},
+ {q:"Código HTTP de 'prohibido'", o:["200","302","403","500"], a:2, e:"403 Forbidden."},
+ {q:"¿Qué registro DNS indica el servidor de correo?", o:["A","MX","NS","PTR"], a:1, e:"MX = Mail eXchanger."},
+ {q:"Un puerto que no responde nada ante un SYN suele estar…", o:["open","closed","filtered","escuchando UDP"], a:2, e:"Sin respuesta → probablemente filtrado por un firewall."},
+ {q:"¿En qué capa OSI trabaja IP?", o:["2","3","4","7"], a:1, e:"Capa 3, red."},
+ {q:"¿Qué interfaz de Kali tiene tu IP en la VPN del lab?", t:1, a:["tun0"], e:"tun0 normalmente."},
+ {q:"Puerto 88 abierto sugiere…", o:["Servidor de correo","Controlador de dominio (Kerberos)","Impresora","Base de datos"], a:1, e:"Kerberos → Active Directory."},
+ {q:"¿Para qué sirve /etc/hosts?", o:["Guardar contraseñas","Resolver nombres manualmente","Configurar el firewall","Listar usuarios"], a:1, e:"Asocia nombres a IPs localmente."}
+]}};
+</script>
+</main></body></html>

@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Escaneo y enumeración · OSCP Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css"><script src="assets/app.js" defer></script>
+</head>
+<body data-page="m06"><main>
+<div class="kicker">Módulo 6 · Nivel intermedio</div>
+<h1>Escaneo y enumeración</h1>
+<p class="lead">“Enumerar” es sacar toda la información posible de cada servicio. Es la fase más importante del OSCP: si enumeras bien, el camino suele aparecer solo.</p>
+<div class="toc"><b>En este módulo</b><ol>
+<li><a href="#nmap">Nmap paso a paso</a></li>
+<li><a href="#leer">Leer el resultado de nmap</a></li>
+<li><a href="#servicios">Enumeración por servicio</a></li>
+<li><a href="#web">Enumeración web</a></li>
+<li><a href="#vulns">De la versión a la vulnerabilidad</a></li>
+<li><a href="#practica">Prácticas y cuestionario</a></li>
+</ol></div>
+
+<h2 id="nmap">1. Nmap paso a paso</h2>
+<div class="box def"><span class="t">Nmap</span>El escáner de red más usado del mundo. Envía paquetes a un equipo y, según cómo responde, deduce qué puertos están abiertos, qué servicio hay detrás y su versión.</div>
+<div class="box analogy"><span class="t">Llamar a todas las puertas</span>Nmap recorre un edificio llamando a cada puerta (puerto). Si alguien contesta, le pregunta “¿quién eres y qué versión?”. Con los scripts (<code>-sC</code>) además le hace unas cuantas preguntas típicas.</div>
+<h3>La estrategia en dos fases</h3>
+<ol class="steps">
+<li><b>Fase rápida</b>: descubrir <i>todos</i> los puertos TCP abiertos (hay 65.535).
+<pre>nmap -p- --min-rate 2000 -Pn -oN todos.nmap 192.168.50.101</pre></li>
+<li><b>Fase detallada</b>: solo sobre los abiertos, versiones y scripts por defecto.
+<pre>nmap -p 22,80,445 -sC -sV -Pn -oN detalle.nmap 192.168.50.101</pre></li>
+<li><b>UDP</b> (lento, solo los más comunes):
+<pre>sudo nmap -sU --top-ports 50 -Pn -oN udp.nmap 192.168.50.101</pre></li>
+</ol>
+<div class="tbl"><table>
+<tr><th>Opción</th><th>Qué hace</th></tr>
+<tr><td><code>-p-</code></td><td>Todos los puertos (1–65535). Sin ella, solo los 1000 más comunes</td></tr>
+<tr><td><code>-p 22,80</code></td><td>Solo esos puertos</td></tr>
+<tr><td><code>-sS</code></td><td>Escaneo SYN (“medio abierto”), por defecto con sudo. Rápido</td></tr>
+<tr><td><code>-sT</code></td><td>Conexión TCP completa (sin sudo o a través de túneles)</td></tr>
+<tr><td><code>-sU</code></td><td>Escaneo UDP</td></tr>
+<tr><td><code>-sV</code></td><td>Detecta servicio y versión</td></tr>
+<tr><td><code>-sC</code></td><td>Lanza los scripts NSE por defecto (seguros)</td></tr>
+<tr><td><code>-O</code></td><td>Intenta adivinar el sistema operativo</td></tr>
+<tr><td><code>-Pn</code></td><td>No hace ping previo (trata el equipo como vivo). Útil con Windows</td></tr>
+<tr><td><code>-sn</code></td><td>Solo descubre equipos vivos, sin escanear puertos</td></tr>
+<tr><td><code>--min-rate</code></td><td>Paquetes por segundo mínimos (más rápido)</td></tr>
+<tr><td><code>-oN / -oA</code></td><td>Guarda la salida (normal / todos los formatos). <b>Guarda siempre</b></td></tr>
+<tr><td><code>--script vuln</code></td><td>Scripts que buscan vulnerabilidades conocidas</td></tr>
+</table></div>
+
+<h2 id="leer">2. Leer el resultado</h2>
+<div class="term" data-title="nmap -sC -sV"><script type="text/plain">
+$ nmap -p 21,22,80,445 -sC -sV -Pn 192.168.50.101
+PORT    STATE SERVICE     VERSION
+21/tcp  open  ftp         vsftpd 3.0.3
+| ftp-anon: Anonymous FTP login allowed (FTP code 230)
+|_-rw-r--r--    1 0  0   1024 Nov 01 backup.zip
+22/tcp  open  ssh         OpenSSH 8.2p1 Ubuntu 4ubuntu0.5
+80/tcp  open  http        Apache httpd 2.4.41 ((Ubuntu))
+|_http-title: Intranet - Login
+| http-robots.txt: 1 disallowed entry
+|_/dev-notes/
+445/tcp open  netbios-ssn Samba smbd 4.6.2
+Service Info: OS: Linux
+// ¿Qué ves? FTP anónimo con un backup.zip, una ruta oculta en robots.txt y Samba.
+</script></div>
+<div class="tbl"><table>
+<tr><th>Línea</th><th>Qué deduces</th><th>Siguiente paso</th></tr>
+<tr><td>ftp-anon allowed + backup.zip</td><td>Cualquiera puede entrar y hay un archivo interesante</td><td>Descargarlo y analizarlo</td></tr>
+<tr><td>OpenSSH 8.2p1 Ubuntu 4ubuntu0.5</td><td>Ubuntu 20.04. SSH moderno: raramente vulnerable</td><td>Guardar para cuando tengas credenciales</td></tr>
+<tr><td>Apache 2.4.41 + robots.txt /dev-notes/</td><td>Web con login y una ruta “escondida”</td><td>Visitar /dev-notes/, buscar directorios</td></tr>
+<tr><td>Samba smbd</td><td>Carpetas compartidas</td><td>Listar recursos sin credenciales</td></tr>
+</table></div>
+<div class="box tip"><span class="t">El “banner” delata el sistema</span>La cadena de versión de OpenSSH o Apache suele indicar la distribución y versión exacta del sistema (por ejemplo “4ubuntu0.5” → Ubuntu 20.04). Búscala en Google.</div>
+
+<h2 id="servicios">3. Enumeración por servicio</h2>
+<p>Para cada puerto, hazte siempre tres preguntas: <b>¿puedo entrar sin credenciales?</b>, <b>¿qué versión es y tiene fallos?</b>, <b>¿qué información me da?</b></p>
+<div class="tbl"><table>
+<tr><th>Servicio</th><th>Comprobaciones clave</th><th>Herramientas</th></tr>
+<tr><td>FTP (21)</td><td>Login <code>anonymous</code>; ¿puedo subir archivos? ¿la carpeta es la de la web?</td><td><code>ftp</code>, <code>wget -m ftp://anonymous:@IP</code></td></tr>
+<tr><td>SSH (22)</td><td>Versión; probar credenciales encontradas; claves <code>id_rsa</code></td><td><code>ssh</code></td></tr>
+<tr><td>SMTP (25)</td><td>¿Permite <code>VRFY</code> para comprobar usuarios?</td><td><code>nc</code>, <code>smtp-user-enum</code></td></tr>
+<tr><td>DNS (53)</td><td>Transferencia de zona, subdominios</td><td><code>dig axfr</code></td></tr>
+<tr><td>HTTP (80/443/8080)</td><td>Ver sección 4</td><td>navegador, <code>whatweb</code>, <code>gobuster</code>, <code>ffuf</code></td></tr>
+<tr><td>SMB (139/445)</td><td>Sesión nula (sin usuario), recursos compartidos, permisos de lectura/escritura</td><td><code>smbclient -L //IP -N</code>, <code>netexec smb</code>, <code>enum4linux-ng</code></td></tr>
+<tr><td>NFS (2049)</td><td>Exportaciones montables</td><td><code>showmount -e IP</code></td></tr>
+<tr><td>SNMP (161/UDP)</td><td>Comunidad <code>public</code>: procesos, usuarios, software</td><td><code>snmpwalk -v2c -c public IP</code>, <code>onesixtyone</code></td></tr>
+<tr><td>LDAP (389)</td><td>Consultas anónimas: usuarios, descripciones</td><td><code>ldapsearch</code></td></tr>
+<tr><td>MySQL / MSSQL / PostgreSQL</td><td>Credenciales por defecto o encontradas</td><td><code>mysql</code>, <code>impacket-mssqlclient</code>, <code>psql</code></td></tr>
+<tr><td>RDP / WinRM</td><td>Acceso con credenciales</td><td><code>xfreerdp</code>, <code>evil-winrm</code></td></tr>
+</table></div>
+<div class="term" data-title="enumerar SMB sin credenciales"><script type="text/plain">
+$ smbclient -L //192.168.50.101 -N
+        Sharename       Type      Comment
+        ---------       ----      -------
+        print$          Disk      Printer Drivers
+        documentos      Disk      Documentos del equipo
+        IPC$            IPC       IPC Service
+$ smbclient //192.168.50.101/documentos -N
+smb: \> ls
+  bienvenida.txt          A      312  Mon Nov  4 10:12:01 2024
+smb: \> get bienvenida.txt
+// Dentro: "Bienvenido al equipo, tu usuario es j.perez y la contraseña inicial Bienvenido2024"
+</script></div>
+
+<h2 id="web">4. Enumeración web</h2>
+<figure class="diagram">
+<svg viewBox="0 0 760 170" role="img" aria-label="Pasos de la enumeración web">
+<g font-size="13" text-anchor="middle">
+<rect class="b1" x="5" y="40" width="140" height="80" rx="10"/><text x="75" y="70" font-weight="700">Mirar</text><text x="75" y="90" class="small">navegar, código</text><text x="75" y="106" class="small">fuente, comentarios</text>
+<rect class="b2" x="157" y="40" width="140" height="80" rx="10"/><text x="227" y="70" font-weight="700">Identificar</text><text x="227" y="90" class="small">CMS, lenguaje,</text><text x="227" y="106" class="small">versiones</text>
+<rect class="b3" x="309" y="40" width="140" height="80" rx="10"/><text x="379" y="70" font-weight="700">Descubrir</text><text x="379" y="90" class="small">directorios,</text><text x="379" y="106" class="small">archivos, vhosts</text>
+<rect class="b4" x="461" y="40" width="140" height="80" rx="10"/><text x="531" y="70" font-weight="700">Interceptar</text><text x="531" y="90" class="small">Burp Suite:</text><text x="531" y="106" class="small">parámetros</text>
+<rect class="b5" x="613" y="40" width="140" height="80" rx="10"/><text x="683" y="70" font-weight="700">Probar</text><text x="683" y="90" class="small">vulnerabilidades</text><text x="683" y="106" class="small">(módulo 7)</text>
+</g>
+<path class="ln flow" d="M145 80h12M297 80h12M449 80h12M601 80h12"/>
+</svg></figure>
+<pre>whatweb http://192.168.50.101                       <span class="cm"># tecnologías detectadas</span>
+curl -I http://192.168.50.101                       <span class="cm"># solo cabeceras</span>
+curl http://192.168.50.101/robots.txt
+gobuster dir -u http://192.168.50.101 -w /usr/share/wordlists/dirb/common.txt -x php,txt,bak
+ffuf -u http://192.168.50.101/FUZZ -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt
+ffuf -u http://192.168.50.101 -H "Host: FUZZ.corp.local" -w subdominios.txt -fs 1234   <span class="cm"># vhosts</span></pre>
+<div class="tbl"><table>
+<tr><th>Mira siempre</th><th>Por qué</th></tr>
+<tr><td>Código fuente (Ctrl+U)</td><td>Comentarios de desarrolladores, rutas, versiones de librerías</td></tr>
+<tr><td><code>/robots.txt</code>, <code>/sitemap.xml</code></td><td>Rutas que el dueño no quiere indexar</td></tr>
+<tr><td>Página de login</td><td>Producto y versión; credenciales por defecto del fabricante</td></tr>
+<tr><td>Formularios y parámetros (<code>?id=</code>, <code>?page=</code>)</td><td>Candidatos a inyecciones e inclusión de archivos</td></tr>
+<tr><td>Subida de archivos</td><td>Posible ejecución de código</td></tr>
+<tr><td>Nombres de personas en la web</td><td>Posibles usuarios</td></tr>
+<tr><td>Archivos <code>.bak</code>, <code>.old</code>, <code>.git</code></td><td>Copias de código con contraseñas</td></tr>
+</table></div>
+<div class="box def"><span class="t">Wordlist</span>Lista de palabras (directorios, usuarios, contraseñas) que una herramienta prueba una a una. En Kali: <code>/usr/share/wordlists/</code> y la colección <b>SecLists</b> (<code>/usr/share/seclists/</code>).</div>
+
+<h2 id="vulns">5. De la versión a la vulnerabilidad</h2>
+<ol class="steps">
+<li>Anota el producto y la versión exacta: <i>“vsftpd 2.3.4”</i>.</li>
+<li>Busca en local: <code>searchsploit vsftpd 2.3.4</code> (base de datos de Exploit-DB).</li>
+<li>Busca en Google: <i>“vsftpd 2.3.4 exploit”</i>, <i>“… CVE”</i>, <i>“… github”</i>.</li>
+<li>Lee el aviso: ¿afecta exactamente a tu versión? ¿requiere autenticación? ¿qué consigue?</li>
+<li>Lee el código del exploit (módulo 4) y pruébalo en tu lab.</li>
+</ol>
+<div class="box warn"><span class="t">No todo es CVE</span>En el OSCP muchas máquinas no se resuelven con un exploit, sino con <b>malas configuraciones</b>: credenciales por defecto, archivos con contraseñas, servicios con permisos de escritura… Si no encuentras un CVE, no te obsesiones.</div>
+<div class="box exam"><span class="t">Herramientas restringidas</span>En el examen no se permiten escáneres automáticos de vulnerabilidades comerciales (Nessus, OpenVAS…) ni explotación automática tipo sqlmap. Nmap con NSE, gobuster/ffuf, etc. sí. Consulta la lista vigente en la guía oficial.</div>
+
+<h2 id="practica">Prácticas</h2>
+<details class="sol"><summary><span class="pill lv1">Fácil</span> Elige las opciones</summary>
+<p class="task">Escribe el comando nmap que escanea todos los puertos TCP de 10.10.10.5 sin hacer ping, y guarda el resultado en <code>full.nmap</code>.</p>
+<pre>nmap -p- -Pn -oN full.nmap 10.10.10.5</pre></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Interpreta</summary>
+<pre>80/tcp   open  http     Microsoft IIS httpd 10.0
+1433/tcp open  ms-sql-s Microsoft SQL Server 2019
+3389/tcp open  ms-wbt-server
+5985/tcp open  http     Microsoft HTTPAPI httpd 2.0</pre>
+<p class="task">¿Qué sistema es y qué harías primero?</p>
+<p><b>Solución:</b> Un Windows Server con IIS, SQL Server, RDP y WinRM. Empezaría por la web (directorios, tecnología, formularios) y, si aparece alguna credencial, la probaría en MSSQL, RDP y WinRM. Si consigues ejecutar código como la cuenta de IIS o MSSQL, revisa <code>whoami /priv</code> (SeImpersonate).</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Gobuster con extensiones</summary>
+<p class="task">Busca en <code>http://10.10.10.5</code> archivos .php y .bak con la wordlist common.txt.</p>
+<pre>gobuster dir -u http://10.10.10.5 -w /usr/share/wordlists/dirb/common.txt -x php,bak</pre></details>
+<details class="sol"><summary><span class="pill lv3">Reto</span> Sala práctica</summary>
+<p class="task">Haz las salas de TryHackMe <b>“Nmap”</b>, <b>“Network Services”</b> y <b>“Network Services 2”</b>. Documenta cada servicio con la tabla “comprobaciones clave” de arriba.</p>
+<p><b>Solución:</b> las salas incluyen sus propias respuestas. Lo importante es que tu tabla de notas quede reutilizable para el examen.</p></details>
+
+<div class="quiz" data-id="q6"></div>
+<script>
+window.QUIZ = { q6: { title: "Cuestionario · Enumeración", qs: [
+ {q:"¿Qué opción escanea todos los puertos?", o:["-sV","-p-","-sC","-A"], a:1, e:"-p- = 1-65535."},
+ {q:"¿Qué opción detecta versiones?", t:1, a:["-sV"], e:"-sV."},
+ {q:"¿Por qué usar -Pn con Windows?", o:["Es más sigiloso","Porque Windows suele bloquear el ping y nmap lo creería apagado","Para escanear UDP","Para ir más rápido siempre"], a:1, e:"Sin -Pn nmap podría saltarse el host."},
+ {q:"¿Qué comando lista recursos SMB sin credenciales?", o:["smbclient -L //IP -N","ftp IP","ssh IP","nmap -sU IP"], a:0, e:"-N = sin contraseña."},
+ {q:"¿Qué es una wordlist?", o:["Un exploit","Una lista de palabras para probar","Un informe","Un log"], a:1, e:"Lista de candidatos."},
+ {q:"Comunidad SNMP por defecto más común", t:1, a:["public"], e:"public."},
+ {q:"¿Qué herramienta busca exploits en la base local de Exploit-DB?", o:["searchsploit","gobuster","whatweb","netcat"], a:0, e:"searchsploit."},
+ {q:"¿Qué archivo web lista rutas que no deben indexarse?", t:1, a:["robots.txt"], e:"robots.txt."},
+ {q:"El escaneo UDP es…", o:["Más rápido que TCP","Lento, por eso se limita a los puertos más comunes","Innecesario","Igual que -sS"], a:1, e:"UDP no responde fiablemente, es lento."},
+ {q:"¿Qué guarda la salida de nmap en todos los formatos?", o:["-oN","-oA","-oX","-v"], a:1, e:"-oA (normal, grepable y XML)."},
+ {q:"¿Qué haces con 'Anonymous FTP login allowed'?", o:["Ignorarlo","Entrar como anonymous y revisar/descargar archivos","Reiniciar el FTP","Solo anotarlo para el final"], a:1, e:"Revisar todo lo accesible."},
+ {q:"Para descubrir subdominios virtuales (vhosts) se fuzzea la cabecera…", o:["Cookie","Host","User-Agent","Referer"], a:1, e:"Host: FUZZ.dominio."}
+]}};
+</script>
+</main></body></html>

@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Linux esencial · OSCP Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css"><script src="assets/app.js" defer></script>
+</head>
+<body data-page="m01"><main>
+<div class="kicker">Módulo 1 · Nivel básico (tipo Linux Essentials)</div>
+<h1>Linux esencial</h1>
+<p class="lead">Kali Linux será tu “caja de herramientas”, y la mitad de las máquinas del examen son Linux. Aquí aprendes a moverte por la terminal con soltura.</p>
+<div class="toc"><b>En este módulo</b><ol>
+<li><a href="#terminal">La terminal: qué es y cómo se lee</a></li>
+<li><a href="#fs">El sistema de archivos</a></li>
+<li><a href="#nav">Moverse y manejar archivos</a></li>
+<li><a href="#users">Usuarios, grupos y /etc/passwd</a></li>
+<li><a href="#perms">Permisos (rwx, chmod, SUID)</a></li>
+<li><a href="#pipes">Tuberías, redirecciones y búsquedas</a></li>
+<li><a href="#proc">Procesos, servicios y red</a></li>
+<li><a href="#practica">Prácticas y cuestionario</a></li>
+</ol></div>
+
+<h2 id="terminal">1. La terminal</h2>
+<div class="box analogy"><span class="t">Hablar con el ordenador</span>La interfaz gráfica es como pedir en un restaurante señalando fotos del menú. La terminal es hablar directamente con el cocinero: más rápido, más preciso y puedes pedir cosas que no salen en el menú.</div>
+<figure class="diagram">
+<svg viewBox="0 0 700 120" role="img" aria-label="Anatomía del prompt">
+<rect x="10" y="20" width="680" height="50" rx="8" fill="var(--code-bg)"/>
+<text x="30" y="52" font-family="JetBrains Mono" font-size="20" style="fill:#7ee2b8">kali</text>
+<text x="80" y="52" font-family="JetBrains Mono" font-size="20" style="fill:#9aa6bd">@</text>
+<text x="102" y="52" font-family="JetBrains Mono" font-size="20" style="fill:#60a5fa">kali</text>
+<text x="152" y="52" font-family="JetBrains Mono" font-size="20" style="fill:#9aa6bd">:</text>
+<text x="168" y="52" font-family="JetBrains Mono" font-size="20" style="fill:#fcd34d">~/htb</text>
+<text x="235" y="52" font-family="JetBrains Mono" font-size="20" style="fill:#9aa6bd">$</text>
+<text x="262" y="52" font-family="JetBrains Mono" font-size="20" style="fill:#fff">ls -la /etc</text>
+<text x="50" y="100" class="small" text-anchor="middle">usuario</text>
+<text x="125" y="100" class="small" text-anchor="middle">equipo</text>
+<text x="200" y="100" class="small" text-anchor="middle">carpeta</text>
+<text x="238" y="100" class="small" text-anchor="middle">$ / #</text>
+<text x="300" y="100" class="small">comando</text><text x="360" y="100" class="small">opciones</text><text x="440" y="100" class="small">argumento</text>
+</svg><figcaption><code>$</code> = usuario normal · <code>#</code> = root. El símbolo te dice al instante qué privilegios tienes.</figcaption></figure>
+<p>Casi todos los comandos siguen el patrón <code>comando -opciones argumentos</code>. Para pedir ayuda: <code>man comando</code> o <code>comando --help</code>.</p>
+
+<h2 id="fs">2. El sistema de archivos</h2>
+<p>En Linux todo cuelga de una única raíz: <code>/</code>. No hay “C:”, “D:”.</p>
+<figure class="diagram">
+<svg viewBox="0 0 760 250" role="img" aria-label="Árbol de directorios de Linux">
+<rect class="b5" x="345" y="10" width="70" height="36" rx="8"/><text x="380" y="34" text-anchor="middle" font-weight="800">/</text>
+<path class="ln" d="M380 46 V70 H50 V90 M380 70 H710 V90 M145 70 V90 M240 70 V90 M335 70 V90 M430 70 V90 M525 70 V90 M620 70 V90"/>
+<g font-size="13">
+<rect class="b1" x="10" y="90" width="80" height="32" rx="6"/><text x="50" y="111" text-anchor="middle" font-weight="700">/etc</text>
+<rect class="b2" x="105" y="90" width="80" height="32" rx="6"/><text x="145" y="111" text-anchor="middle" font-weight="700">/home</text>
+<rect class="b5" x="200" y="90" width="80" height="32" rx="6"/><text x="240" y="111" text-anchor="middle" font-weight="700">/root</text>
+<rect class="b3" x="295" y="90" width="80" height="32" rx="6"/><text x="335" y="111" text-anchor="middle" font-weight="700">/var</text>
+<rect class="b4" x="390" y="90" width="80" height="32" rx="6"/><text x="430" y="111" text-anchor="middle" font-weight="700">/tmp</text>
+<rect class="bx" x="485" y="90" width="80" height="32" rx="6"/><text x="525" y="111" text-anchor="middle" font-weight="700">/usr</text>
+<rect class="bx" x="580" y="90" width="80" height="32" rx="6"/><text x="620" y="111" text-anchor="middle" font-weight="700">/opt</text>
+<rect class="bx" x="670" y="90" width="80" height="32" rx="6"/><text x="710" y="111" text-anchor="middle" font-weight="700">/proc</text>
+</g>
+<g class="small" text-anchor="middle">
+<text x="50" y="145">configuración</text><text x="50" y="161">passwd, shadow</text>
+<text x="145" y="145">carpetas de</text><text x="145" y="161">usuarios</text>
+<text x="240" y="145">casa de</text><text x="240" y="161">root</text>
+<text x="335" y="145">logs y webs</text><text x="335" y="161">/var/www/html</text>
+<text x="430" y="145">temporal,</text><text x="430" y="161">todos escriben</text>
+<text x="525" y="145">programas</text><text x="525" y="161">/usr/bin</text>
+<text x="620" y="145">software</text><text x="620" y="161">de terceros</text>
+<text x="710" y="145">procesos</text><text x="710" y="161">(virtual)</text>
+</g>
+<text x="380" y="215" text-anchor="middle" class="small">Lugares que un pentester siempre revisa: /etc, /home, /var/www, /opt, /tmp</text>
+</svg></figure>
+<div class="box tip"><span class="t">Rutas</span><b>Absoluta</b>: empieza por <code>/</code> (<code>/home/ana/notas.txt</code>). <b>Relativa</b>: desde donde estás (<code>notas.txt</code>). Atajos: <code>~</code> = tu carpeta personal, <code>.</code> = aquí, <code>..</code> = carpeta de arriba.</div>
+
+<h2 id="nav">3. Moverse y manejar archivos</h2>
+<div class="tbl"><table>
+<tr><th>Comando</th><th>Qué hace</th><th>Ejemplo</th></tr>
+<tr><td><code>pwd</code></td><td>Muestra dónde estás</td><td><code>pwd</code></td></tr>
+<tr><td><code>ls</code></td><td>Lista archivos (<code>-l</code> detalle, <code>-a</code> ocultos)</td><td><code>ls -la /home</code></td></tr>
+<tr><td><code>cd</code></td><td>Cambia de carpeta</td><td><code>cd /var/www</code></td></tr>
+<tr><td><code>cat</code></td><td>Muestra el contenido de un archivo</td><td><code>cat /etc/os-release</code></td></tr>
+<tr><td><code>less</code></td><td>Lee archivos largos página a página (q para salir)</td><td><code>less /var/log/syslog</code></td></tr>
+<tr><td><code>touch</code> / <code>mkdir</code></td><td>Crea archivo / carpeta</td><td><code>mkdir -p scans/web</code></td></tr>
+<tr><td><code>cp</code> / <code>mv</code> / <code>rm</code></td><td>Copia / mueve o renombra / borra</td><td><code>cp a.txt b.txt</code></td></tr>
+<tr><td><code>head</code> / <code>tail</code></td><td>Primeras / últimas líneas</td><td><code>tail -f access.log</code></td></tr>
+<tr><td><code>file</code></td><td>Dice qué tipo de archivo es realmente</td><td><code>file misterio.bin</code></td></tr>
+<tr><td><code>nano</code> / <code>vim</code></td><td>Editores de texto en terminal</td><td><code>nano notas.md</code></td></tr>
+</table></div>
+
+<div class="term" data-title="primeros pasos"><script type="text/plain">
+kali@kali:~$ pwd
+/home/kali
+kali@kali:~$ mkdir -p oscp/maquina1 && cd oscp/maquina1
+kali@kali:~$ ls -la
+total 8
+drwxr-xr-x 2 kali kali 4096 nov  9 10:00 .
+drwxr-xr-x 3 kali kali 4096 nov  9 10:00 ..
+kali@kali:~$ file /bin/ls
+/bin/ls: ELF 64-bit LSB pie executable, x86-64
+// ELF = formato de los programas en Linux (el .exe de Windows)
+</script></div>
+
+<h2 id="users">4. Usuarios, grupos y /etc/passwd</h2>
+<p>Cada persona o servicio tiene un <b>usuario</b> con un número (UID). <b>root siempre es UID 0</b>. Los usuarios se agrupan en <b>grupos</b> para compartir permisos.</p>
+<pre>root:x:0:0:root:/root:/bin/bash
+ana:x:1000:1000:Ana Garcia:/home/ana:/bin/bash
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin</pre>
+<figure class="diagram">
+<svg viewBox="0 0 760 120" role="img" aria-label="Campos de /etc/passwd">
+<g font-family="JetBrains Mono" font-size="17">
+<text x="20" y="40">ana : x : 1000 : 1000 : Ana Garcia : /home/ana : /bin/bash</text></g>
+<g class="small" text-anchor="middle">
+<text x="35" y="80">usuario</text><text x="95" y="80">contraseña</text><text x="95" y="96">(en shadow)</text><text x="170" y="80">UID</text><text x="255" y="80">GID</text><text x="380" y="80">descripción</text><text x="545" y="80">carpeta personal</text><text x="690" y="80">shell</text>
+</g></svg></figure>
+<ul>
+<li><code>/etc/passwd</code>: lista de usuarios. <b>Todos</b> pueden leerlo.</li>
+<li><code>/etc/shadow</code>: los <b>hashes</b> de las contraseñas. Solo root puede leerlo. Si un atacante lo lee, puede intentar crackearlos (módulo 9).</li>
+<li><code>/etc/group</code>: los grupos. Grupos “interesantes”: <code>sudo</code>, <code>adm</code> (lee logs), <code>docker</code>, <code>lxd</code> (módulo 10).</li>
+</ul>
+<pre>whoami          <span class="cm"># ¿quién soy?</span>
+id              <span class="cm"># mi UID, GID y grupos</span>
+sudo -l         <span class="cm"># ¿qué puedo ejecutar como root con sudo?</span>
+su ana          <span class="cm"># cambiar al usuario ana (pide su contraseña)</span></pre>
+
+<h2 id="perms">5. Permisos</h2>
+<pre>-rwxr-x--- 1 ana devs 4096 nov 9 script.sh</pre>
+<figure class="diagram">
+<svg viewBox="0 0 640 170" role="img" aria-label="Desglose de permisos">
+<g font-family="JetBrains Mono" font-size="28" font-weight="700">
+<rect class="bx" x="40" y="20" width="40" height="46" rx="6"/><text x="60" y="53" text-anchor="middle">-</text>
+<rect class="b1" x="90" y="20" width="120" height="46" rx="6"/><text x="150" y="53" text-anchor="middle">rwx</text>
+<rect class="b2" x="220" y="20" width="120" height="46" rx="6"/><text x="280" y="53" text-anchor="middle">r-x</text>
+<rect class="b3" x="350" y="20" width="120" height="46" rx="6"/><text x="410" y="53" text-anchor="middle">---</text>
+</g>
+<g text-anchor="middle" font-size="14">
+<text x="60" y="92">tipo</text><text x="150" y="92" font-weight="700">dueño (ana)</text><text x="280" y="92" font-weight="700">grupo (devs)</text><text x="410" y="92" font-weight="700">otros</text>
+<text x="150" y="114" class="small">4+2+1 = 7</text><text x="280" y="114" class="small">4+0+1 = 5</text><text x="410" y="114" class="small">0</text>
+</g>
+<text x="500" y="40" font-size="14">r = leer = 4</text><text x="500" y="62" font-size="14">w = escribir = 2</text><text x="500" y="84" font-size="14">x = ejecutar = 1</text>
+<text x="320" y="150" text-anchor="middle" font-weight="700">chmod 750 script.sh</text>
+</svg></figure>
+<div class="tbl"><table>
+<tr><th>Número</th><th>Letras</th><th>Significado</th></tr>
+<tr><td>7</td><td>rwx</td><td>todo</td></tr><tr><td>6</td><td>rw-</td><td>leer y escribir</td></tr>
+<tr><td>5</td><td>r-x</td><td>leer y ejecutar</td></tr><tr><td>4</td><td>r--</td><td>solo leer</td></tr><tr><td>0</td><td>---</td><td>nada</td></tr>
+</table></div>
+<pre>chmod +x script.sh      <span class="cm"># da permiso de ejecución</span>
+chmod 644 notas.txt     <span class="cm"># rw-r--r--</span>
+chown ana:devs a.txt    <span class="cm"># cambia dueño y grupo</span></pre>
+<h3>Permisos especiales: SUID</h3>
+<div class="box def"><span class="t">SUID</span>Un programa con el bit <b>SUID</b> (aparece una <code>s</code> en lugar de la <code>x</code> del dueño: <code>-rwsr-xr-x</code>) se ejecuta <b>con los permisos de su dueño</b>, no con los de quien lo lanza. Ejemplo legítimo: <code>passwd</code>, que necesita escribir en <code>/etc/shadow</code>.</div>
+<div class="box analogy"><span class="t">La llave maestra prestada</span>SUID es como si el conserje te dejara usar su llave maestra solo para abrir el cuarto de la lavadora. Si la “lavadora” (el programa) permite hacer otras cosas, podrías acabar abriendo todo el edificio. Por eso, en el módulo 10 buscaremos programas SUID mal elegidos.</div>
+<pre>find / -perm -4000 -type f 2>/dev/null    <span class="cm"># lista programas con SUID</span></pre>
+
+<h2 id="pipes">6. Tuberías, redirecciones y búsquedas</h2>
+<figure class="diagram">
+<svg viewBox="0 0 720 110" role="img" aria-label="Tubería entre comandos">
+<rect class="b1" x="10" y="30" width="170" height="50" rx="10"/><text x="95" y="60" text-anchor="middle" font-weight="700">cat access.log</text>
+<rect class="b2" x="270" y="30" width="170" height="50" rx="10"/><text x="355" y="60" text-anchor="middle" font-weight="700">grep "404"</text>
+<rect class="b3" x="530" y="30" width="170" height="50" rx="10"/><text x="615" y="60" text-anchor="middle" font-weight="700">wc -l</text>
+<path class="ln flow" d="M180 55 H268 M440 55 H528"/><text x="224" y="45" text-anchor="middle" font-weight="800">|</text><text x="484" y="45" text-anchor="middle" font-weight="800">|</text>
+<text x="360" y="104" text-anchor="middle" class="small">La salida de un comando es la entrada del siguiente, como una cadena de montaje</text>
+</svg></figure>
+<div class="tbl"><table>
+<tr><th>Símbolo</th><th>Significado</th><th>Ejemplo</th></tr>
+<tr><td><code>|</code></td><td>Pasa la salida al siguiente comando</td><td><code>ps aux | grep apache</code></td></tr>
+<tr><td><code>&gt;</code></td><td>Guarda la salida en un archivo (sobrescribe)</td><td><code>ls &gt; lista.txt</code></td></tr>
+<tr><td><code>&gt;&gt;</code></td><td>Añade al final del archivo</td><td><code>echo hola &gt;&gt; notas.txt</code></td></tr>
+<tr><td><code>2&gt;/dev/null</code></td><td>Tira los errores a la “papelera”</td><td><code>find / -name x 2&gt;/dev/null</code></td></tr>
+<tr><td><code>&amp;&amp;</code></td><td>Ejecuta el segundo solo si el primero va bien</td><td><code>mkdir a &amp;&amp; cd a</code></td></tr>
+</table></div>
+<pre>grep -ri "password" /var/www 2>/dev/null        <span class="cm"># busca texto en todos los archivos</span>
+find / -name "*.conf" -type f 2>/dev/null        <span class="cm"># busca archivos por nombre</span>
+find /home -writable -type d 2>/dev/null         <span class="cm"># carpetas donde puedo escribir</span>
+cut -d: -f1 /etc/passwd                          <span class="cm"># solo la primera columna (usuarios)</span>
+sort lista.txt | uniq -c | sort -nr              <span class="cm"># cuenta repeticiones</span></pre>
+
+<h2 id="proc">7. Procesos, servicios y red</h2>
+<div class="tbl"><table>
+<tr><th>Comando</th><th>Para qué</th></tr>
+<tr><td><code>ps aux</code></td><td>Todos los procesos y qué usuario los ejecuta</td></tr>
+<tr><td><code>top</code> / <code>htop</code></td><td>Procesos en tiempo real</td></tr>
+<tr><td><code>systemctl status ssh</code></td><td>Estado de un servicio</td></tr>
+<tr><td><code>ip a</code></td><td>Tus direcciones IP</td></tr>
+<tr><td><code>ss -tulpn</code></td><td>Puertos que están escuchando en esta máquina</td></tr>
+<tr><td><code>cat /etc/crontab</code></td><td>Tareas programadas del sistema</td></tr>
+<tr><td><code>uname -a</code></td><td>Versión del kernel</td></tr>
+<tr><td><code>env</code></td><td>Variables de entorno (a veces guardan contraseñas)</td></tr>
+<tr><td><code>history</code></td><td>Comandos que se ejecutaron antes</td></tr>
+<tr><td><code>wget</code> / <code>curl</code></td><td>Descargar archivos o hacer peticiones web</td></tr>
+</table></div>
+<div class="box exam"><span class="t">Primeros comandos al entrar en una máquina</span><code>whoami; id; hostname; uname -a; ip a; sudo -l</code>. Anota el resultado: formará parte de tus pruebas en el reporte.</div>
+
+<h2 id="practica">Prácticas</h2>
+<div class="box tip"><span class="t">Dónde practicar</span>El juego <b>OverTheWire: Bandit</b> (gratis, por SSH) es el mejor ejercicio de Linux para principiantes. Haz al menos hasta el nivel 20.</div>
+<details class="sol"><summary><span class="pill lv1">Fácil</span> Calcula permisos</summary>
+<p class="task">¿Qué número corresponde a <code>rw-r-----</code>? ¿Y qué letras son <code>755</code>?</p>
+<p><b>Solución:</b> rw- = 6, r-- = 4, --- = 0 → <b>640</b>. 755 = <b>rwxr-xr-x</b>.</p></details>
+<details class="sol"><summary><span class="pill lv1">Fácil</span> Lee /etc/passwd</summary>
+<p class="task">Dada la línea <code>backup:x:0:0::/var/backups:/bin/bash</code>, ¿qué tiene de raro?</p>
+<p><b>Solución:</b> Su UID es <b>0</b>: este usuario es en realidad root con otro nombre. Es un hallazgo grave (puerta trasera o mala configuración).</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Cuenta usuarios con shell</summary>
+<p class="task">Escribe una sola línea que muestre solo los nombres de usuarios cuya shell termina en <code>sh</code>.</p>
+<pre>grep 'sh$' /etc/passwd | cut -d: -f1</pre>
+<p><code>grep 'sh$'</code> filtra las líneas que acaban en “sh”; <code>cut</code> se queda con el primer campo.</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Buscar credenciales olvidadas</summary>
+<p class="task">Busca, sin mostrar errores, todos los archivos <code>.php</code> dentro de <code>/var/www</code> que contengan la palabra “password”, mostrando solo el nombre del archivo.</p>
+<pre>grep -ril "password" /var/www --include="*.php" 2>/dev/null</pre>
+<p><code>-r</code> recursivo, <code>-i</code> sin distinguir mayúsculas, <code>-l</code> solo nombres de archivo.</p></details>
+<details class="sol"><summary><span class="pill lv3">Reto</span> Interpreta este listado</summary>
+<pre>-rwsr-xr-x 1 root root  54K /usr/bin/passwd
+-rwxrwxrwx 1 root root  120 /opt/backup.sh
+-rw-r--r-- 1 root root  2.3K /etc/crontab   (contiene: */5 * * * * root /opt/backup.sh)</pre>
+<p class="task">¿Qué ves de peligroso?</p>
+<p><b>Solución:</b> <code>passwd</code> con SUID es normal. Lo grave es que <code>/opt/backup.sh</code> tiene permisos <b>777</b> (cualquiera puede modificarlo) y root lo ejecuta cada 5 minutos desde cron. Cualquier usuario podría añadir instrucciones que se ejecutarían como root. Es una escalada de privilegios clásica que verás en el módulo 10. Mitigación: <code>chmod 700</code> y que el dueño sea root.</p></details>
+
+<div class="quiz" data-id="q1"></div>
+<script>
+window.QUIZ = { q1: { title: "Cuestionario · Linux", qs: [
+ {q:"¿Qué comando muestra en qué carpeta estás?", o:["ls","cd","pwd","whoami"], a:2, e:"pwd = print working directory."},
+ {q:"¿Qué archivo guarda los hashes de las contraseñas?", o:["/etc/passwd","/etc/shadow","/etc/group","/root/.bashrc"], a:1, e:"/etc/shadow, solo legible por root."},
+ {q:"¿Qué UID tiene root?", t:1, a:["0"], e:"root siempre tiene UID 0."},
+ {q:"chmod 600 equivale a…", o:["rw-------","rwxrwxrwx","r--r--r--","rwx------"], a:0, e:"6=rw-, 0=---, 0=---."},
+ {q:"¿Qué indica una 's' en -rwsr-xr-x?", o:["Archivo oculto","SUID: se ejecuta con permisos del dueño","Es un enlace","Es un socket"], a:1, e:"El bit SUID."},
+ {q:"¿Qué hace 2>/dev/null?", o:["Borra el archivo","Oculta los mensajes de error","Guarda la salida","Ejecuta como root"], a:1, e:"Redirige la salida de errores (2) a /dev/null."},
+ {q:"¿Qué comando muestra qué puedes ejecutar con sudo?", t:1, a:["sudo -l"], e:"sudo -l lista tus permisos de sudo."},
+ {q:"¿Qué carpeta pueden escribir todos los usuarios normalmente?", o:["/root","/etc","/tmp","/usr/bin"], a:2, e:"/tmp es escribible por todos."},
+ {q:"¿Para qué sirve ss -tulpn?", o:["Ver puertos en escucha","Ver usuarios","Cambiar contraseña","Copiar archivos"], a:0, e:"Muestra sockets TCP/UDP en escucha y el proceso."},
+ {q:"El prompt termina en '#'. Significa que…", o:["Eres usuario normal","Eres root","Hay un error","Estás en Windows"], a:1, e:"# indica root."},
+ {q:"¿Qué hace el símbolo | ?", o:["Guarda en archivo","Pasa la salida de un comando a otro","Comenta la línea","Ejecuta en segundo plano"], a:1, e:"La tubería (pipe)."},
+ {q:"¿Dónde suelen estar los archivos de una web en Linux?", o:["/var/www/html","/etc/web","/home/web","/proc/www"], a:0, e:"/var/www/html es la ruta típica de Apache/Nginx."}
+]}};
+</script>
+</main></body></html>

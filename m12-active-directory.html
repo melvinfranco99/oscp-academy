@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Active Directory · OSCP Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css"><script src="assets/app.js" defer></script>
+</head>
+<body data-page="m12"><main>
+<div class="kicker">Módulo 12 · Nivel OSCP · 40 puntos del examen</div>
+<h1>Active Directory</h1>
+<p class="lead">El 40% del examen. Empiezas con unas credenciales de usuario normal (“brecha asumida”) y debes llegar a <b>Domain Admin</b>. Es menos de “explotar un fallo” y más de <b>moverse entre cuentas y equipos</b>.</p>
+<div class="toc"><b>En este módulo</b><ol>
+<li><a href="#que">¿Qué es Active Directory?</a></li>
+<li><a href="#piezas">Piezas clave</a></li>
+<li><a href="#kerberos">Cómo se autentica (Kerberos en sencillo)</a></li>
+<li><a href="#flujo">El flujo del examen AD</a></li>
+<li><a href="#enum">Enumeración del dominio</a></li>
+<li><a href="#ataques">Técnicas típicas (vista conceptual)</a></li>
+<li><a href="#lateral">Movimiento lateral</a></li>
+<li><a href="#practica">Prácticas y cuestionario</a></li>
+</ol></div>
+
+<h2 id="que">1. ¿Qué es Active Directory?</h2>
+<div class="box def"><span class="t">Active Directory (AD)</span>El sistema de Microsoft para gestionar <b>de forma central</b> todos los usuarios, equipos y permisos de una empresa. En vez de tener una cuenta en cada ordenador, tienes <b>una cuenta de dominio</b> que sirve para todos.</div>
+<div class="box analogy"><span class="t">La oficina con recepción central</span>En vez de que cada despacho tenga su propia lista de quién puede entrar, hay una recepción (el controlador de dominio) con la lista maestra. Tu tarjeta de empleado abre las puertas que recepción diga. Si consigues ser el “jefe de recepción” (Domain Admin), controlas todas las puertas del edificio.</div>
+
+<h2 id="piezas">2. Piezas clave</h2>
+<figure class="diagram">
+<svg viewBox="0 0 760 230" role="img" aria-label="Estructura de un dominio">
+<rect class="b5" x="300" y="10" width="170" height="54" rx="10"/><text x="385" y="33" text-anchor="middle" font-weight="700">DC01</text><text x="385" y="51" text-anchor="middle" class="small">Controlador de dominio</text>
+<text x="385" y="82" text-anchor="middle" class="small">corp.local · guarda la base de datos (NTDS.dit)</text>
+<path class="ln" d="M385 92 V110 H140 V130 M385 110 H385 V130 M385 110 H630 V130"/>
+<rect class="b1" x="60" y="130" width="160" height="80" rx="10"/><text x="140" y="155" text-anchor="middle" font-weight="700">Usuarios</text><text x="140" y="175" text-anchor="middle" class="small">ana, j.perez…</text><text x="140" y="193" text-anchor="middle" class="small">grupos: Domain Admins</text>
+<rect class="b2" x="300" y="130" width="170" height="80" rx="10"/><text x="385" y="155" text-anchor="middle" font-weight="700">Equipos</text><text x="385" y="175" text-anchor="middle" class="small">PC01, SRV02…</text><text x="385" y="193" text-anchor="middle" class="small">unidos al dominio</text>
+<rect class="b3" x="550" y="130" width="160" height="80" rx="10"/><text x="630" y="155" text-anchor="middle" font-weight="700">Políticas (GPO)</text><text x="630" y="175" text-anchor="middle" class="small">reglas que se</text><text x="630" y="193" text-anchor="middle" class="small">aplican a todos</text>
+</svg></figure>
+<div class="tbl"><table>
+<tr><th>Término</th><th>Qué es</th></tr>
+<tr><td>Dominio</td><td>La “organización” lógica (p. ej. <code>corp.local</code>)</td></tr>
+<tr><td>Controlador de dominio (DC)</td><td>El servidor que guarda la base de datos y valida los inicios de sesión</td></tr>
+<tr><td>NTDS.dit</td><td>La base de datos con todos los usuarios y sus hashes. El “tesoro”</td></tr>
+<tr><td>Usuario de dominio</td><td>Cuenta que funciona en todos los equipos del dominio</td></tr>
+<tr><td>Grupos</td><td>Domain Admins (control total), Enterprise Admins, etc.</td></tr>
+<tr><td>GPO</td><td>Políticas de grupo: configuraciones que se empujan a todos</td></tr>
+<tr><td>SPN</td><td>“Nombre” de un servicio asociado a una cuenta (importante para Kerberoasting)</td></tr>
+</table></div>
+
+<h2 id="kerberos">3. Cómo se autentica (Kerberos en sencillo)</h2>
+<div class="box analogy"><span class="t">El festival con pulseras</span>Llegas a la taquilla (DC), enseñas tu DNI (contraseña) y te dan una <b>pulsera general</b> (TGT) que prueba que eres tú. Cuando quieres entrar a un concierto concreto (un servicio), enseñas la pulsera general y te dan una <b>entrada para ese concierto</b> (TGS). El portero del concierto solo mira esa entrada.</div>
+<figure class="diagram">
+<svg viewBox="0 0 760 210" role="img" aria-label="Flujo Kerberos">
+<defs><marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--fg2)"/></marker></defs>
+<rect class="b1" x="30" y="80" width="130" height="50" rx="10"/><text x="95" y="110" text-anchor="middle" font-weight="700">Usuario</text>
+<rect class="b5" x="320" y="20" width="130" height="50" rx="10"/><text x="385" y="50" text-anchor="middle" font-weight="700">DC (KDC)</text>
+<rect class="b2" x="600" y="140" width="130" height="50" rx="10"/><text x="665" y="170" text-anchor="middle" font-weight="700">Servicio</text>
+<path class="ln" marker-end="url(#ak)" d="M160 95 L318 55"/><text x="230" y="60" class="small">1 pido pulsera (TGT)</text>
+<path class="ln" marker-end="url(#ak)" d="M318 60 L162 100"/><text x="235" y="118" class="small">2 toma tu TGT</text>
+<path class="ln" marker-end="url(#ak)" d="M160 115 L318 65" opacity="0"/>
+<path class="ln dash" marker-end="url(#ak)" d="M200 120 C 300 180 320 90 322 72"/><text x="300" y="160" class="small">3 con TGT pido entrada (TGS)</text>
+<path class="ln" marker-end="url(#ak)" d="M450 55 L598 150"/><text x="540" y="90" class="small">4 TGS</text>
+<path class="ln" marker-end="url(#ak)" d="M160 118 L598 170"/><text x="380" y="200" text-anchor="middle" class="small">5 presento el TGS y entro</text>
+</svg></figure>
+<div class="box tip"><span class="t">Por qué importa</span>Varias técnicas de AD abusan de este baile de pulseras: pedir entradas (TGS) de cuentas de servicio para crackearlas offline (<b>Kerberoasting</b>), o aprovechar cuentas que no exigen pre-autenticación (<b>AS-REP Roasting</b>). No necesitas memorizar la criptografía: basta con entender el flujo.</div>
+
+<h2 id="flujo">4. El flujo del examen AD</h2>
+<ol class="steps">
+<li><b>Credenciales iniciales</b>: el examen te da un usuario de dominio (o lo consigues en la primera máquina).</li>
+<li><b>Enumerar el dominio</b>: usuarios, grupos, equipos, relaciones de permisos.</li>
+<li><b>Conseguir más credenciales</b>: Kerberoasting, contraseñas en recursos compartidos, en descripciones de usuario, etc.</li>
+<li><b>Movimiento lateral</b>: usar esas credenciales para entrar en otro equipo.</li>
+<li><b>Escalar en el dominio</b>: hasta una cuenta con control sobre el DC.</li>
+<li><b>Comprometer el DC</b>: extraer la base de datos (NTDS.dit) = control total.</li>
+</ol>
+<div class="box warn"><span class="t">Cuidado con los bloqueos</span>En AD, la fuerza bruta puede bloquear cuentas. Usa spraying con cabeza (módulo 9) y enumera el umbral de bloqueo antes.</div>
+
+<h2 id="enum">5. Enumeración del dominio</h2>
+<div class="tbl"><table>
+<tr><th>Herramienta</th><th>Para qué</th></tr>
+<tr><td><b>netexec</b> (antes CrackMapExec)</td><td>Probar credenciales en SMB/WinRM/LDAP en muchos equipos; enumerar recursos, usuarios, políticas</td></tr>
+<tr><td><b>BloodHound</b> + SharpHound</td><td>Dibuja un <b>grafo</b> de “quién puede llegar a quién”. Encuentra el camino más corto a Domain Admin</td></tr>
+<tr><td><b>ldapsearch</b> / windapsearch</td><td>Consultas al directorio (usuarios, descripciones con contraseñas)</td></tr>
+<tr><td><b>Impacket</b> (GetUserSPNs, GetNPUsers, secretsdump…)</td><td>Colección de scripts para casi todas las técnicas de AD</td></tr>
+<tr><td><b>enum4linux-ng</b></td><td>Enumeración SMB/RPC</td></tr>
+<tr><td><b>evil-winrm</b></td><td>Consola remota cómoda cuando tienes credenciales y WinRM abierto</td></tr>
+</table></div>
+<div class="box def"><span class="t">BloodHound</span>Herramienta que recoge toda la información del dominio y la muestra como un mapa de nodos (usuarios, equipos, grupos) y flechas (permisos). Preguntas como “¿qué camino me lleva de mi usuario a Domain Admin?” se responden con un clic. Es casi imprescindible en el examen.</div>
+<div class="term" data-title="netexec: validar credenciales en el dominio"><script type="text/plain">
+$ netexec smb 192.168.50.0/24 -u j.perez -p 'Primavera2024!'
+SMB  192.168.50.10   DC01   [+] corp.local\j.perez:Primavera2024!
+SMB  192.168.50.21   SRV02  [+] corp.local\j.perez:Primavera2024! (Pwn3d!)
+// "Pwn3d!" significa que ese usuario es administrador local en SRV02: puedes entrar.
+</script></div>
+
+<h2 id="ataques">6. Técnicas típicas (vista conceptual)</h2>
+<div class="tbl"><table>
+<tr><th>Técnica</th><th>En una frase</th><th>Requiere</th></tr>
+<tr><td>Kerberoasting</td><td>Pedir “entradas” (TGS) de cuentas de servicio y crackear su contraseña offline</td><td>Cualquier usuario de dominio</td></tr>
+<tr><td>AS-REP Roasting</td><td>Igual, pero con cuentas que no exigen pre-autenticación</td><td>Lista de usuarios</td></tr>
+<tr><td>Password spraying</td><td>Una contraseña común contra muchos usuarios</td><td>Lista de usuarios</td></tr>
+<tr><td>Abuso de ACL/permisos</td><td>Un usuario tiene permiso para cambiar la contraseña o el grupo de otro</td><td>BloodHound para verlo</td></tr>
+<tr><td>Pass-the-Hash</td><td>Autenticarte con el hash NTLM sin conocer la contraseña</td><td>Hash de un usuario</td></tr>
+<tr><td>DCSync</td><td>Pedir al DC los hashes de todos “como si fueras otro DC”</td><td>Permisos de replicación (alto privilegio)</td></tr>
+<tr><td>Dump NTDS.dit</td><td>Extraer toda la base de datos de credenciales del DC</td><td>Admin del dominio/DC</td></tr>
+</table></div>
+<div class="box exam"><span class="t">Qué estudiar de verdad</span>Para el examen, domina el <b>flujo</b> y sabe ejecutar Kerberoasting, AS-REP Roasting, spraying, pass-the-hash y secretsdump con Impacket/netexec, y leer BloodHound. No hace falta criptografía avanzada: hace falta soltura con las herramientas y entender qué consigue cada paso.</div>
+
+<h2 id="lateral">7. Movimiento lateral</h2>
+<p>Con credenciales (contraseña o hash) y un servicio de administración abierto, saltas de un equipo a otro:</p>
+<div class="tbl"><table>
+<tr><th>Vía</th><th>Herramienta típica</th><th>Puerto</th></tr>
+<tr><td>WinRM</td><td><code>evil-winrm -i IP -u user -p pass</code></td><td>5985</td></tr>
+<tr><td>SMB (ejecutar)</td><td><code>impacket-psexec</code>, <code>impacket-wmiexec</code>, <code>netexec ... -x</code></td><td>445</td></tr>
+<tr><td>RDP</td><td><code>xfreerdp /u:user /p:pass /v:IP</code></td><td>3389</td></tr>
+<tr><td>Con hash (PtH)</td><td><code>netexec smb IP -u user -H HASH</code></td><td>445</td></tr>
+</table></div>
+<figure class="diagram">
+<svg viewBox="0 0 760 130" role="img" aria-label="Movimiento lateral hasta el DC">
+<defs><marker id="al" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--fg2)"/></marker></defs>
+<rect class="b1" x="10" y="45" width="140" height="50" rx="10"/><text x="80" y="68" text-anchor="middle" font-weight="700">Mi usuario</text><text x="80" y="85" text-anchor="middle" class="small">j.perez</text>
+<rect class="b2" x="230" y="45" width="140" height="50" rx="10"/><text x="300" y="68" text-anchor="middle" font-weight="700">SRV02</text><text x="300" y="85" text-anchor="middle" class="small">admin local → hashes</text>
+<rect class="b3" x="450" y="45" width="140" height="50" rx="10"/><text x="520" y="68" text-anchor="middle" font-weight="700">admin dominio</text><text x="520" y="85" text-anchor="middle" class="small">credencial hallada</text>
+<rect class="b5" x="620" y="45" width="130" height="50" rx="10"/><text x="685" y="68" text-anchor="middle" font-weight="700">DC01</text><text x="685" y="85" text-anchor="middle" class="small">NTDS.dit</text>
+<path class="ln flow" marker-end="url(#al)" d="M150 70H228M370 70H448M590 70H618"/>
+</svg></figure>
+
+<h2 id="practica">Prácticas</h2>
+<div class="box tip"><span class="t">Dónde practicar</span>TryHackMe ruta “Active Directory” y salas como “Attacktive Directory”; HTB módulos de AD; y, sobre todo, el mini-dominio de los <b>labs de PEN-200</b>. Monta BloodHound y familiarízate con sus consultas predefinidas.</div>
+<details class="sol"><summary><span class="pill lv1">Fácil</span> Vocabulario</summary>
+<p class="task">¿Qué es el DC, qué es NTDS.dit y qué grupo da control total del dominio?</p>
+<p><b>Solución:</b> DC = controlador de dominio (valida logins); NTDS.dit = base de datos con todos los hashes; grupo = Domain Admins.</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Interpreta netexec</summary>
+<p class="task">Un barrido con netexec marca <code>(Pwn3d!)</code> en SRV02 para tu usuario. ¿Qué significa y qué harías?</p>
+<p><b>Solución:</b> tu usuario es administrador local en SRV02. Entrarías (psexec/wmiexec/evil-winrm) y, ya como admin local, volcarías credenciales de ese equipo (SAM y memoria) para conseguir nuevas cuentas con las que seguir avanzando hacia el DC.</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Elige la técnica</summary>
+<p class="task">Tienes un usuario de dominio sin privilegios y quieres más credenciales sin arriesgar bloqueos. ¿Qué pruebas primero?</p>
+<p><b>Solución:</b> Kerberoasting (<code>impacket-GetUserSPNs</code>): con cualquier usuario válido pides los TGS de cuentas de servicio y los crackeas offline, sin intentos de login contra cuentas (cero riesgo de bloqueo). También AS-REP Roasting si hay usuarios sin pre-autenticación.</p></details>
+<details class="sol"><summary><span class="pill lv3">Reto</span> Traza el camino</summary>
+<p class="task">BloodHound muestra: tu usuario → (MemberOf) grupo “Soporte” → (GenericAll) sobre el usuario “svc_backup” → (MemberOf) “Backup Operators” en DC01. Explica cómo llegarías al DC.</p>
+<p><b>Solución:</b> perteneces a “Soporte”, que tiene control total (GenericAll) sobre <code>svc_backup</code>; eso te permite cambiarle la contraseña o apoderarte de la cuenta. <code>svc_backup</code> está en “Backup Operators” del DC, grupo que concede SeBackupPrivilege en el controlador: con él puedes leer archivos protegidos y extraer la base de datos (NTDS.dit / SAM+SYSTEM del DC) para obtener todos los hashes, incluido el de Administrator del dominio. Resultado: control del dominio. Cada paso, documentado y capturado para el reporte.</p></details>
+
+<div class="quiz" data-id="q12"></div>
+<script>
+window.QUIZ = { q12: { title: "Cuestionario · Active Directory", qs: [
+ {q:"¿Qué porcentaje del examen es AD?", o:["20","40","60","10"], a:1, e:"40 puntos de 100."},
+ {q:"El servidor que valida los logins del dominio es el…", t:1, a:["dc","controlador de dominio","domain controller"], e:"Controlador de dominio (DC)."},
+ {q:"¿Qué archivo contiene todos los hashes del dominio?", o:["SAM","NTDS.dit","shadow","web.config"], a:1, e:"NTDS.dit, en el DC."},
+ {q:"¿Qué grupo da control total del dominio?", o:["Users","Backup Operators","Domain Admins","Guests"], a:2, e:"Domain Admins."},
+ {q:"Kerberoasting requiere…", o:["Ser Domain Admin","Cualquier usuario de dominio válido","Acceso físico","Un exploit de kernel"], a:1, e:"Basta un usuario del dominio."},
+ {q:"¿Qué herramienta dibuja el grafo de caminos a Domain Admin?", o:["BloodHound","nmap","Hydra","exiftool"], a:0, e:"BloodHound."},
+ {q:"Pass-the-Hash permite…", o:["Crackear el hash","Autenticarte con el hash sin la contraseña","Cambiar la contraseña","Borrar el hash"], a:1, e:"Usas el hash NTLM directamente."},
+ {q:"En netexec, '(Pwn3d!)' significa…", o:["Error","El usuario es admin local en ese equipo","La máquina está apagada","Contraseña caducada"], a:1, e:"Admin local → acceso."},
+ {q:"¿Qué técnica extrae todos los hashes pidiéndoselos al DC como otro DC?", o:["DCSync","XSS","LFI","SQLi"], a:0, e:"DCSync (requiere permisos de replicación)."},
+ {q:"Para moverte por WinRM con credenciales usas…", t:1, a:["evil-winrm"], e:"evil-winrm."},
+ {q:"¿Por qué cuidado con la fuerza bruta en AD?", o:["Es lenta","Bloquea cuentas","No funciona","Es ilegal"], a:1, e:"Account lockout."},
+ {q:"La colección de scripts de Python para AD se llama…", o:["Impacket","Metasploit","SecLists","PEASS"], a:0, e:"Impacket."}
+]}};
+</script>
+</main></body></html>

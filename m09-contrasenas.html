@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Contraseñas y hashes · OSCP Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css"><script src="assets/app.js" defer></script>
+</head>
+<body data-page="m09"><main>
+<div class="kicker">Módulo 9 · Nivel intermedio</div>
+<h1>Contraseñas y hashes</h1>
+<p class="lead">Las credenciales son la moneda del pentest. Aquí entiendes qué es un hash, cómo se “crackea”, y cómo probar credenciales de forma ordenada. Todo en tus propios laboratorios.</p>
+<div class="toc"><b>En este módulo</b><ol>
+<li><a href="#hash">¿Qué es un hash?</a></li>
+<li><a href="#tipos">Reconocer tipos de hash</a></li>
+<li><a href="#crack">Crackear: diccionario vs fuerza bruta</a></li>
+<li><a href="#online">Ataques “online” a servicios</a></li>
+<li><a href="#reuse">Reutilización y spraying</a></li>
+<li><a href="#defensa">Cómo se defiende (para el reporte)</a></li>
+<li><a href="#practica">Prácticas y cuestionario</a></li>
+</ol></div>
+
+<h2 id="hash">1. ¿Qué es un hash?</h2>
+<div class="box def"><span class="t">Hash</span>Resultado de pasar un texto por una función matemática de un solo sentido. De la contraseña sale el hash fácilmente, pero del hash <b>no</b> se puede volver a la contraseña. Por eso los sistemas guardan el hash, no la contraseña.</div>
+<div class="box analogy"><span class="t">La batidora</span>Metes fruta y sale batido (hash). No puedes “desbatir” el batido para recuperar la fruta entera. Pero si pruebas a batir muchas frutas, puedes comparar y descubrir cuál dio ese batido exacto. Eso es “crackear”.</div>
+<figure class="diagram">
+<svg viewBox="0 0 720 130" role="img" aria-label="contraseña a hash">
+<defs><marker id="a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--fg2)"/></marker></defs>
+<rect class="b2" x="20" y="40" width="160" height="50" rx="10"/><text x="100" y="70" text-anchor="middle" font-weight="700">Verano2024!</text>
+<rect class="b3" x="280" y="40" width="130" height="50" rx="10"/><text x="345" y="70" text-anchor="middle" font-weight="700">función hash</text>
+<rect class="b5" x="480" y="40" width="230" height="50" rx="10"/><text x="595" y="68" text-anchor="middle" font-family="JetBrains Mono" font-size="12">e99a18c428cb38d5...</text>
+<path class="ln" marker-end="url(#a9)" d="M180 65H278"/><path class="ln" marker-end="url(#a9)" d="M410 65H478"/>
+<path class="ln dash" marker-end="url(#a9)" d="M595 92 C595 120 100 120 100 92"/><text x="345" y="122" text-anchor="middle" class="small" style="fill:var(--bad)">volver atrás: imposible directamente ✗</text>
+</svg></figure>
+<div class="box def"><span class="t">Sal (salt)</span>Texto aleatorio que se añade a cada contraseña antes de hashearla, para que dos personas con la misma contraseña tengan hashes distintos. Encarece el crackeo masivo. Los hashes modernos de Linux (<code>$6$...</code>) llevan sal; los NTLM de Windows <b>no</b>.</div>
+
+<h2 id="tipos">2. Reconocer tipos de hash</h2>
+<div class="tbl"><table>
+<tr><th>Aspecto</th><th>Tipo</th><th>Dónde aparece</th></tr>
+<tr><td><code>$1$...</code></td><td>MD5crypt</td><td>Linux antiguo</td></tr>
+<tr><td><code>$6$...</code></td><td>SHA-512crypt</td><td>/etc/shadow moderno</td></tr>
+<tr><td><code>$y$...</code> / <code>$2b$...</code></td><td>yescrypt / bcrypt</td><td>Linux/apps modernas (lentos de crackear)</td></tr>
+<tr><td>32 hex</td><td>MD5 o NTLM</td><td>Apps web (MD5) / Windows (NTLM)</td></tr>
+<tr><td>40 hex</td><td>SHA-1</td><td>Apps antiguas</td></tr>
+<tr><td>64 hex</td><td>SHA-256</td><td>Apps</td></tr>
+<tr><td><code>user:1001:aad3...:31d6...:::</code></td><td>Formato de volcado SAM (NTLM)</td><td>Windows (<code>secretsdump</code>)</td></tr>
+</table></div>
+<div class="box tip"><span class="t">Identificar automáticamente</span>Usa <code>hashid 'hash'</code> o <code>hash-identifier</code>, y en el crackeador el modo correcto. Fíjate también en <i>de dónde</i> salió el hash: el contexto suele decir el tipo.</div>
+
+<h2 id="crack">3. Crackear: diccionario vs fuerza bruta</h2>
+<div class="cols">
+<div class="card"><h4>📖 Ataque de diccionario</h4><p>Pruebas palabras de una lista (<code>rockyou.txt</code>). Rápido y el más efectivo, porque la gente usa contraseñas comunes.</p></div>
+<div class="card"><h4>🔢 Fuerza bruta</h4><p>Pruebas <i>todas</i> las combinaciones. Garantizado pero lentísimo; solo para contraseñas muy cortas.</p></div>
+</div>
+<p>Los dos crackeadores estándar son <b>John the Ripper</b> y <b>Hashcat</b> (usa la tarjeta gráfica, mucho más rápido). <code>rockyou.txt</code> está en <code>/usr/share/wordlists/</code> (descomprímela con <code>gunzip</code>).</p>
+<pre><span class="cm"># John detecta el tipo automáticamente</span>
+john --wordlist=/usr/share/wordlists/rockyou.txt hashes.txt
+john --show hashes.txt            <span class="cm"># ver lo ya crackeado</span>
+
+<span class="cm"># Hashcat: hay que indicar el modo (-m). 0=MD5, 1000=NTLM, 1800=sha512crypt, 22000=WPA</span>
+hashcat -m 1000 -a 0 hashes.txt /usr/share/wordlists/rockyou.txt</pre>
+<div class="box def"><span class="t">Reglas (mangling)</span>Transformaciones que aplican variaciones a cada palabra del diccionario: añadir números, poner mayúscula, cambiar <code>a→@</code>… Así <code>primavera</code> genera <code>Primavera1</code>, <code>Primavera2024!</code>, etc. En John: <code>--rules</code>; en Hashcat: <code>-r reglas.rule</code>.</div>
+<h3>Casos frecuentes en el OSCP</h3>
+<div class="tbl"><table>
+<tr><th>Hallazgo</th><th>Herramienta</th></tr>
+<tr><td>Hash de /etc/shadow</td><td><code>unshadow passwd shadow &gt; j.txt</code> y luego John</td></tr>
+<tr><td>ZIP/archivo protegido</td><td><code>zip2john</code>, <code>ssh2john</code> (clave id_rsa con passphrase), <code>office2john</code></td></tr>
+<tr><td>Hash NTLM de Windows</td><td>Hashcat <code>-m 1000</code></td></tr>
+<tr><td>Hash de WordPress / apps</td><td>Identificar y usar el modo adecuado</td></tr>
+</table></div>
+<div class="box warn"><span class="t">Si no cae, no insistas</span>Un hash bcrypt/yescrypt con contraseña fuerte no vas a crackearlo en el examen. Busca la contraseña por otro lado (archivos, reutilización) o cambia de camino.</div>
+
+<h2 id="online">4. Ataques “online” a servicios</h2>
+<p>En vez de crackear un hash, pruebas usuario+contraseña directamente contra un servicio (SSH, FTP, formulario web, RDP…). Más lento y “ruidoso”.</p>
+<pre>hydra -l j.perez -P /usr/share/wordlists/rockyou.txt ssh://10.10.10.5
+hydra -L usuarios.txt -P pass.txt 10.10.10.5 http-post-form \
+  "/login.php:user=^USER^&pass=^PASS^:Invalid"
+netexec smb 10.10.10.5 -u usuarios.txt -p pass.txt</pre>
+<div class="box warn"><span class="t">Bloqueos de cuenta</span>Muchos sistemas (sobre todo Active Directory) <b>bloquean</b> la cuenta tras varios intentos. En el examen, un bloqueo masivo puede arruinar una máquina. Usa listas pequeñas y con criterio; evita la fuerza bruta agresiva contra logins con bloqueo.</div>
+
+<h2 id="reuse">5. Reutilización y password spraying</h2>
+<figure class="diagram">
+<svg viewBox="0 0 720 160" role="img" aria-label="Brute force vs spraying">
+<text x="180" y="24" text-anchor="middle" font-weight="700">Fuerza bruta (peligrosa)</text>
+<rect class="b5" x="120" y="40" width="120" height="40" rx="8"/><text x="180" y="65" text-anchor="middle">1 usuario</text>
+<text x="180" y="105" text-anchor="middle" class="small">× muchas contraseñas</text><text x="180" y="122" text-anchor="middle" class="small" style="fill:var(--bad)">→ bloqueo de cuenta</text>
+<text x="540" y="24" text-anchor="middle" font-weight="700">Password spraying (cuidadosa)</text>
+<rect class="b2" x="440" y="40" width="200" height="40" rx="8"/><text x="540" y="65" text-anchor="middle">muchos usuarios</text>
+<text x="540" y="105" text-anchor="middle" class="small">× 1 contraseña habitual (p. ej. Otoño2024!)</text><text x="540" y="122" text-anchor="middle" class="small" style="fill:var(--good)">→ evita bloqueos</text>
+</svg></figure>
+<ul>
+<li><b>Reutilización</b>: una contraseña encontrada en la máquina A, o en un archivo de configuración, pruébala en <b>todos</b> los usuarios y servicios. Es la vía más rentable del examen.</li>
+<li><b>Spraying</b>: una sola contraseña muy probable contra muchos usuarios, respetando el límite de intentos.</li>
+</ul>
+<div class="box exam"><span class="t">Regla de oro</span>Mantén un archivo <code>credenciales.md</code> con <b>todos</b> los usuarios y contraseñas que vayas encontrando, y pruébalos de forma cruzada cada vez que llegues a un servicio nuevo.</div>
+
+<h2 id="defensa">6. Cómo se defiende (para el reporte)</h2>
+<div class="tbl"><table>
+<tr><th>Problema</th><th>Recomendación</th></tr>
+<tr><td>Contraseñas débiles</td><td>Política de longitud (14+), frases de contraseña, prohibir las comunes</td></tr>
+<tr><td>Reutilización</td><td>Gestor de contraseñas, contraseñas únicas por servicio/cuenta</td></tr>
+<tr><td>Hashes débiles</td><td>Algoritmos lentos con sal (bcrypt, Argon2, yescrypt)</td></tr>
+<tr><td>Credenciales en archivos</td><td>Gestión de secretos (Vault), nunca en código ni en texto plano</td></tr>
+<tr><td>Fuerza bruta</td><td>Bloqueo temporal, MFA, monitorización de intentos fallidos</td></tr>
+</table></div>
+
+<h2 id="practica">Prácticas</h2>
+<div class="box tip"><span class="t">Dónde practicar</span>TryHackMe “Crack the Hash” y “Hydra”. Crea tú mismo hashes con <code>mkpasswd</code> o webs de hashing y practica crackeándolos. <b>Nunca</b> contra cuentas o servicios que no sean tuyos o de un lab autorizado.</p></div>
+<details class="sol"><summary><span class="pill lv1">Fácil</span> Identifica el hash</summary>
+<p class="task">¿Qué son? (a) <code>$6$xyz$abc...</code>  (b) 32 caracteres hexadecimales en un volcado de Windows  (c) <code>$2b$12$...</code></p>
+<p><b>Solución:</b> (a) SHA-512crypt (Linux shadow), (b) NTLM, (c) bcrypt (lento, difícil de crackear).</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Elige el modo de Hashcat</summary>
+<p class="task">Tienes hashes NTLM extraídos de la SAM de un Windows de tu lab. ¿Qué comando usarías?</p>
+<pre>hashcat -m 1000 -a 0 ntlm.txt /usr/share/wordlists/rockyou.txt</pre>
+<p><code>-m 1000</code> es NTLM; <code>-a 0</code> es ataque de diccionario.</p></details>
+<details class="sol"><summary><span class="pill lv2">Media</span> Clave SSH con passphrase</summary>
+<p class="task">Has encontrado una clave privada <code>id_rsa</code> protegida con contraseña. ¿Cómo intentarías abrirla?</p>
+<pre>ssh2john id_rsa &gt; id.hash
+john --wordlist=/usr/share/wordlists/rockyou.txt id.hash</pre>
+<p>Si cae, usas la passphrase para <code>ssh -i id_rsa usuario@IP</code>.</p></details>
+<details class="sol"><summary><span class="pill lv3">Reto</span> Estrategia sin fuerza bruta</summary>
+<p class="task">En una máquina AD, hay bloqueo tras 5 intentos. Tienes 30 usuarios y una contraseña que encontraste en un recurso compartido: <code>Bienvenido2024</code>. ¿Qué haces?</p>
+<p><b>Solución:</b> password spraying: pruebas <b>esa única</b> contraseña contra los 30 usuarios (1 intento cada uno, muy por debajo del umbral de 5). Es seguro frente a bloqueos y muy efectivo porque las contraseñas “de bienvenida” se repiten. Herramienta típica: <code>netexec smb DC -u usuarios.txt -p 'Bienvenido2024' --continue-on-success</code>. Espacia los intentos si el umbral se reinicia por tiempo.</p></details>
+
+<div class="quiz" data-id="q9"></div>
+<script>
+window.QUIZ = { q9: { title: "Cuestionario · Contraseñas", qs: [
+ {q:"Un hash es…", o:["Una contraseña cifrada que se puede descifrar","El resultado de una función de un solo sentido","Un tipo de virus","Una clave pública"], a:1, e:"De un solo sentido: no se revierte directamente."},
+ {q:"¿Para qué sirve la sal (salt)?", o:["Acelerar el login","Que contraseñas iguales den hashes distintos","Cifrar el disco","Comprimir el hash"], a:1, e:"Evita ataques masivos y rainbow tables."},
+ {q:"¿Qué wordlist clásica trae Kali?", t:1, a:["rockyou.txt"], e:"rockyou.txt."},
+ {q:"¿Qué crackeador usa la GPU y es muy rápido?", o:["John","Hydra","Hashcat","nmap"], a:2, e:"Hashcat."},
+ {q:"El modo -m 1000 de Hashcat es…", o:["MD5","NTLM","bcrypt","WPA"], a:1, e:"NTLM."},
+ {q:"¿Qué ataque prueba usuario+contraseña directamente contra SSH?", o:["Offline con John","Hydra (online)","searchsploit","exiftool"], a:1, e:"Ataque online con Hydra/netexec."},
+ {q:"Password spraying consiste en…", o:["Muchas contraseñas a un usuario","Una contraseña a muchos usuarios","Crackear la SAM","Usar rainbow tables"], a:1, e:"Evita bloqueos."},
+ {q:"¿Qué prefijo indica bcrypt?", o:["$6$","$1$","$2b$","$y$"], a:2, e:"$2a$/$2b$ = bcrypt."},
+ {q:"Encuentras una contraseña en la máquina A. Deberías…", o:["Usarla solo en A","Probarla en todos los usuarios y servicios","Borrarla","Ignorarla"], a:1, e:"La reutilización es clave."},
+ {q:"Combinar passwd y shadow para John se hace con…", t:1, a:["unshadow"], e:"unshadow passwd shadow."},
+ {q:"¿Qué riesgo tiene la fuerza bruta online en AD?", o:["Es ilegal siempre","Bloqueo de cuentas","Borra el hash","Apaga la máquina"], a:1, e:"El bloqueo puede arruinar la máquina."}
+]}};
+</script>
+</main></body></html>
